@@ -6,7 +6,7 @@ self.addEventListener('install', event => {
     await cache.addAll(SHELL)
     const response = await fetch('/index.html', { cache: 'reload' })
     const html = await response.text()
-    const assets = [...html.matchAll(/(?:src|href)="([^"]+\\.(?:js|css))"/g)]
+    const assets = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)]
       .map(match => new URL(match[1], self.location.origin).pathname)
       .filter(path => path.startsWith('/') && !path.startsWith('//'))
     await cache.addAll(assets)
