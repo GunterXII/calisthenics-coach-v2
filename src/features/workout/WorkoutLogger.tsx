@@ -3,6 +3,7 @@ import { Plus, Minus, Trash2, X, Timer, RotateCcw } from 'lucide-react'
 import { EXERCISES, VALID_LOADS_KG } from '../../data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from '../../types'
 import { suggestStrengthProgression } from '../../domain/strengthProgression'
+import { getStrengthPlanOverride, saveStrengthPlanOverride } from '../../domain/strengthPlanOverrides'
 
 type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void> }
 
@@ -14,7 +15,10 @@ function previous(workouts: WorkoutLog[], id: ExerciseId) {
 }
 
 function makeSet(id: ExerciseId, prev?: SetLog): SetLog {
-  return { id: crypto.randomUUID(), exerciseId: id, variation: prev?.variation ?? 'Strict', addedLoadKg: prev?.addedLoadKg ?? 0, targetReps: prev?.targetReps ?? 6, actualReps: prev?.targetReps ?? 6, rir: prev?.rir ?? 2, completed: true, technique: 'good', notes: '', createdAt: Date.now() }
+  const variation = prev?.variation ?? 'Strict'
+  const override = getStrengthPlanOverride(id, variation)
+  const targetReps = override?.targetReps ?? prev?.targetReps ?? 6
+  return { id: crypto.randomUUID(), exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? prev?.addedLoadKg ?? 0, targetReps, actualReps: targetReps, rir: prev?.rir ?? 2, completed: true, technique: 'good', notes: '', createdAt: Date.now() }
 }
 
 function formatRest(seconds: number) {
@@ -32,6 +36,7 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave }: P
   const [pain, setPain] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [suggestionModes, setSuggestionModes] = useState<Record<string, 'accepted' | 'kept' | 'editing' | 'custom'>>({})
   const [restDuration, setRestDuration] = useState(180)
   const [restEndAt, setRestEndAt] = useState<number | null>(null)
   const [restPausedRemaining, setRestPausedRemaining] = useState<number | null>(null)
@@ -76,6 +81,17 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave }: P
   }
 
   const patch = (id: string, p: Partial<SetLog>) => setSets(xs => xs.map(s => s.id === id ? { ...s, ...p } : s))
+  const applySuggestion = (set: SetLog, mode: 'suggested' | 'custom') => {
+    const targetReps = mode === 'suggested'
+      ? (suggestStrengthProgression(workouts, set.exerciseId, set.variation)?.nextRepTarget ?? set.targetReps)
+      : set.targetReps
+    const suggested = suggestStrengthProgression(workouts, set.exerciseId, set.variation)
+    const addedLoadKg = mode === 'suggested' ? (suggested?.nextLoadKg ?? set.addedLoadKg) : set.addedLoadKg
+    const nextTarget = mode === 'suggested' ? targetReps : set.targetReps
+    saveStrengthPlanOverride({ exerciseId: set.exerciseId, variation: set.variation, targetReps: nextTarget, addedLoadKg, savedAt: Date.now() })
+    patch(set.id, { targetReps: nextTarget, actualReps: nextTarget, addedLoadKg })
+    setSuggestionModes(previous => ({ ...previous, [set.id]: mode === 'suggested' ? 'accepted' : 'custom' }))
+  }
   const submit = async () => {
     if (!sets.length || saving) return
     setSaving(true)
@@ -108,11 +124,19 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave }: P
 
     <div className="logger-section-head"><strong>SERIE E PRESTAZIONI</strong><span>{sets.length} serie</span></div>
     {sets.map((s, i) => <article className="logger-set" key={s.id}><div className="logger-set-head"><strong>Serie {i + 1}</strong><button className="icon-button danger" onClick={() => setSets(xs => xs.filter(x => x.id !== s.id))} aria-label={'Rimuovi serie ' + (i + 1)}><Trash2 size={15} /></button></div>
-      <label>Esercizio<select value={s.exerciseId} onChange={e => { const id = e.target.value as ExerciseId; const p = previous(workouts, id); patch(s.id, { exerciseId: id, variation: p?.variation ?? 'Strict', addedLoadKg: p?.addedLoadKg ?? 0, targetReps: p?.targetReps ?? 6, actualReps: p?.targetReps ?? 6 }) }}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+      <label>Esercizio<select value={s.exerciseId} onChange={e => { const id = e.target.value as ExerciseId; const p = previous(workouts, id); const variation = p?.variation ?? 'Strict'; const override = getStrengthPlanOverride(id, variation); const targetReps = override?.targetReps ?? p?.targetReps ?? 6; patch(s.id, { exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? p?.addedLoadKg ?? 0, targetReps, actualReps: targetReps }) }}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
       <label>Variante<input value={s.variation} onChange={e => patch(s.id, { variation: e.target.value })} /></label>
       <div className="form-grid"><label>Target<input type="number" min="0" value={s.targetReps} onChange={e => patch(s.id, { targetReps: Math.max(0, Number(e.target.value)) })} /></label><label>Effettive<div className="stepper"><button type="button" onClick={() => patch(s.id, { actualReps: Math.max(0, s.actualReps - 1) })} aria-label="Meno una ripetizione"><Minus size={14} /></button><input type="number" min="0" value={s.actualReps} onChange={e => patch(s.id, { actualReps: Math.max(0, Number(e.target.value)) })} /><button type="button" onClick={() => patch(s.id, { actualReps: s.actualReps + 1 })} aria-label="Più una ripetizione"><Plus size={14} /></button></div></label></div>
       <div className="form-grid"><label>Zavorra<select value={s.addedLoadKg} onChange={e => patch(s.id, { addedLoadKg: Number(e.target.value) })}>{VALID_LOADS_KG.map(v => <option key={v} value={v}>{v} kg</option>)}</select></label><label>RIR<input type="number" min="0" max="10" value={s.rir ?? ''} onChange={e => patch(s.id, { rir: e.target.value === '' ? null : Number(e.target.value) })} /></label></div>
-      <div className="form-grid"><label>Tecnica<select value={s.technique} onChange={e => patch(s.id, { technique: e.target.value as SetLog['technique'] })}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label><label className="check-label"><input type="checkbox" checked={s.completed} onChange={e => patch(s.id, { completed: e.target.checked })} /> Completata</label></div><label>Note serie<input value={s.notes} onChange={e => patch(s.id, { notes: e.target.value })} /></label>{suggestStrengthProgression(workouts, s.exerciseId, s.variation) && <div className="progression-hint"><strong>{suggestStrengthProgression(workouts, s.exerciseId, s.variation)?.title}</strong><span>{suggestStrengthProgression(workouts, s.exerciseId, s.variation)?.detail}</span></div>}</article>)}
+      <div className="form-grid"><label>Tecnica<select value={s.technique} onChange={e => patch(s.id, { technique: e.target.value as SetLog['technique'] })}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label><label className="check-label"><input type="checkbox" checked={s.completed} onChange={e => patch(s.id, { completed: e.target.checked })} /> Completata</label></div><label>Note serie<input value={s.notes} onChange={e => patch(s.id, { notes: e.target.value })} /></label>{(() => {
+        const suggestion = suggestStrengthProgression(workouts, s.exerciseId, s.variation)
+        const mode = suggestionModes[s.id]
+        if (!suggestion) return null
+        if (mode === 'accepted' || mode === 'custom') return <div className="progression-hint"><strong>Prossimo allenamento aggiornato</strong><span>Target e carico sono stati salvati per questa variante sul dispositivo.</span><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'editing' }))}>MODIFICA TARGET</button></div>
+        if (mode === 'kept') return <div className="progression-hint"><strong>Livello attuale mantenuto</strong><span>La proposta è stata ignorata; puoi comunque modificare target e carico sopra.</span><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: undefined as never }))}>RIVEDI PROPOSTA</button></div>
+        if (mode === 'editing') return <div className="progression-hint"><strong>Personalizza la prossima seduta</strong><span>Modifica target e carico nei campi sopra, poi salva questi valori come prossimo target.</span><button type="button" className="secondary-button" onClick={() => applySuggestion(s, 'custom')}>SALVA VALORI MODIFICATI</button></div>
+        return <div className="progression-hint"><strong>{suggestion.title}</strong><span>{suggestion.detail}</span><div className="form-grid"><button type="button" className="secondary-button" onClick={() => applySuggestion(s, 'suggested')}>ACCETTA</button><button type="button" className="secondary-button" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'kept' }))}>MANTIENI</button></div><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'editing' }))}>MODIFICA PROPOSTA</button></div>
+      })()}</article>)}
     <div className="add-set-row"><select value={selected} onChange={e => setSelected(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary-button" onClick={() => setSets(xs => [...xs, makeSet(selected, previous(workouts, selected))])}><Plus size={15} /> AGGIUNGI SERIE</button></div>
     <div className="logger-section-head"><strong>RECUPERO E FEEDBACK</strong></div><div className="form-grid"><label>Fatica (1–10)<input type="number" min="1" max="10" value={fatigue ?? ''} onChange={e => setFatigue(e.target.value === '' ? null : Number(e.target.value))} /></label><label>Ore di sonno<input type="number" min="0" max="24" step=".5" value={sleepHours ?? ''} onChange={e => setSleepHours(e.target.value === '' ? null : Number(e.target.value))} /></label></div>
     <label>Dolore / fastidi<input value={pain} onChange={e => setPain(e.target.value)} /></label><label>Note sessione<textarea value={notes} onChange={e => setNotes(e.target.value)} /></label><button className="primary-button full" disabled={!sets.length || saving} onClick={() => void submit()}>{saving ? 'SALVATAGGIO...' : 'SALVA SESSIONE'}</button>
