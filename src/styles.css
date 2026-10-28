@@ -51,3 +51,50 @@
 .rest-timer-panel .secondary-button{display:flex;align-items:center;justify-content:center;gap:7px}
 .rest-timer-panel p{margin:0;font-size:9px;line-height:1.5;color:#888}
 @media(max-width:370px){.minute-dots{grid-template-columns:repeat(4,minmax(0,1fr))}.minute-result{min-height:56px}.rest-panel-head strong{font-size:30px}}
+
+
+/* Training cycle, recovery advice, editable progression controls and analytics filters */
+.recovery-advisor{display:grid;gap:8px;margin:20px 0 26px;background:#171717;border:1px solid #383838;border-radius:13px;padding:13px}
+.recovery-advisor-head{display:flex;align-items:center;justify-content:space-between;color:#b7f500;font-size:9px;letter-spacing:1.2px}
+.recovery-advisor-head strong{font-size:9px;color:#aaa;letter-spacing:.4px}
+.recovery-alert{display:flex;align-items:flex-start;gap:10px;padding:10px 0 2px;border-top:1px solid #2b2b2b}
+.recovery-alert>svg{flex:0 0 auto;color:#e8c267;margin-top:1px}
+.recovery-alert strong{font-size:11px;color:#f4f4f4}
+.recovery-alert p{font-size:10px;line-height:1.55;color:#aaa;margin:5px 0 0}
+.cycle-selector{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:18px 0}
+.cycle-selector button{display:grid;gap:5px;justify-items:center;padding:12px 3px;border:1px solid #303030;border-radius:11px;background:#151515;color:#888}
+.cycle-selector button small{font-size:7px;letter-spacing:.7px}
+.cycle-selector button strong{font-size:23px;color:#f4f4f4}
+.cycle-selector button span{font-size:7px;letter-spacing:.7px}
+.cycle-selector button.selected{border-color:#8fae00;background:#1d2608;color:#b7f500}
+.cycle-selector button.selected strong,.cycle-selector button.selected span{color:#b7f500}
+.deload-banner{display:grid;gap:6px;border:1px solid #665223;background:#211d12;border-radius:11px;padding:13px;margin-bottom:14px}
+.deload-banner strong{font-size:11px;color:#f2d273}
+.deload-banner span{font-size:10px;color:#c9bd9d;line-height:1.5}
+.plan-line{align-items:flex-start}
+.plan-line-copy{display:grid;gap:6px;min-width:0;flex:1}
+.plan-line-copy>span{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.plan-line>small{white-space:nowrap;text-align:right}
+.plan-notes{font-size:9px;line-height:1.5;color:#858585;margin:0}
+.optional-tag{font-size:7px!important;letter-spacing:.8px;border:1px solid #604f26;color:#e8c267!important;border-radius:10px;padding:3px 5px}
+.progression-hint{display:grid;gap:8px;background:#141a08;border:1px solid #3b4c12;border-radius:10px;padding:12px}
+.progression-hint strong{font-size:11px;color:#b7f500}
+.progression-hint span{font-size:10px;line-height:1.5;color:#c4c4c4}
+.progression-hint .form-grid{gap:7px}
+.progression-hint .secondary-button{padding:11px 6px;font-size:8px}
+.text-action{border:0;background:transparent;color:#b7f500;font-size:8px;font-weight:800;letter-spacing:.8px;padding:5px 0;text-align:left;cursor:pointer;width:max-content}
+.chart-subtitle{display:block;color:#888;font-size:9px;line-height:1.5;padding:0 4px;margin:0 0 8px}
+.emom-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.emom-filter-grid label{display:grid;gap:6px;font-size:9px;color:#999;min-width:0}
+.emom-filter-grid select{min-width:0;width:100%;background:#090909;color:#eee;border:1px solid #383838;border-radius:8px;padding:9px 5px;font-size:9px}
+.activity-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:8px 3px 12px}
+.activity-day{aspect-ratio:1;border-radius:4px;background:#292929;border:1px solid #303030}
+.activity-day.level-1{background:#566b16;border-color:#667e18}
+.activity-day.level-2{background:#88b000;border-color:#9bc600}
+.activity-day.level-3{background:#b7f500;border-color:#c9ff26}
+.activity-legend{display:flex;align-items:center;gap:5px;color:#777;font-size:8px}
+.activity-legend i{display:block;width:11px;height:11px;border-radius:3px;background:#292929}
+.activity-legend i.level-1{background:#566b16}
+.activity-legend i.level-2{background:#88b000}
+.activity-legend i.level-3{background:#b7f500}
+@media(max-width:380px){.emom-filter-grid{grid-template-columns:1fr}.cycle-selector button strong{font-size:19px}.plan-line{gap:8px}.plan-line>small{font-size:8px}}
