@@ -128,6 +128,21 @@ describe('recovery alerts', () => {
     const alerts = getRecoveryAlerts([workout('fatigued', '2026-10-28', 8, { fatigue: 9 })])
     expect(alerts.map(alert => alert.id)).toContain('fatigue')
   })
+
+  it('keeps the latest known sleep and fatigue readings when newer EMOM logs have no feedback', () => {
+    const older = workout('previous-strength', '2026-10-27', 10, { sleepHours: 5, fatigue: 9 })
+    const newerEmom: WorkoutLog = {
+      ...workout('newer-emom', '2026-10-28', 0),
+      setLogs: [],
+      emomLogs: [emom()],
+      sleepHours: null,
+      fatigue: null,
+      completedAt: Date.parse('2026-10-28T20:00:00Z'),
+    }
+    const alerts = getRecoveryAlerts([newerEmom, older])
+    expect(alerts.map(alert => alert.id)).toContain('sleep')
+    expect(alerts.map(alert => alert.id)).toContain('fatigue')
+  })
 })
 
 describe('strength progression rules', () => {
