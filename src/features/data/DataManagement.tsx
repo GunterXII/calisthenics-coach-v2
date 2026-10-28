@@ -13,7 +13,7 @@ export default function DataManagement({ workouts }: { workouts: WorkoutLog[] })
       const backup = await createBackup()
       const stamp = new Date().toISOString().slice(0,10)
       downloadText(`calisthenics-coach-backup-${stamp}.json`, JSON.stringify(backup,null,2), 'application/json')
-      setMessage(`Backup creato: ${backup.data.workouts.length} sessioni, ${backup.data.emoms.length} EMOM, ${backup.data.records.length} test.`)
+      setMessage(`Backup creato: ${backup.data.workouts.length} sessioni, ${backup.data.emoms.length} EMOM, ${backup.data.records.length} test, ${backup.settings.strengthPlanOverrides.length + backup.settings.emomPlanOverrides.length} progressioni e settimana ${backup.settings.cycleWeek}/4.`)
     } catch { setMessage('Esportazione non riuscita. Riprova.') }
     finally { setBusy(false) }
   }
