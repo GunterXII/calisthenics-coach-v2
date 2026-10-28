@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Check, Pencil, X } from 'lucide-react'
-import { VALID_LOADS_KG, prescriptionForWeek, prescriptionSummary, prescriptionNotes, type CycleWeek, type Prescription, type TrainingDay } from '../../data/program'
+import { Check, X } from 'lucide-react'
+import { VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, type CycleWeek, type Prescription, type TrainingDay } from '../../data/program'
 import { getStrengthPlanOverride, saveStrengthPlanOverride } from '../../domain/strengthPlanOverrides'
 import { getEmomPlanOverride, saveEmomPlanOverride } from '../../domain/emomPlanOverrides'
 
@@ -45,12 +45,11 @@ export default function PlanEditor({ day, cycleWeek, onSaved }: Props) {
   }
   return <div className="plan-day">
     <div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>
-    {prescriptions.length ? prescriptions.map((raw, i) => {
+    {prescriptions.length ? prescriptions.map((raw) => {
       const p = effectivePrescription(raw)
       const key = keyFor(p)
       const draft = drafts[key]
       const isEditing = editingKey === key
-      const displayed = prescriptionForWeek(p, cycleWeek)
       return <div className="plan-line-wrap" key={key}>
         <div className="plan-line">
           <div className="plan-line-copy">
