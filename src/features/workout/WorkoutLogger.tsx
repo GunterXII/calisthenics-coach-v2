@@ -5,7 +5,7 @@ import type { ExerciseId, SetLog, WorkoutLog } from '../../types'
 import { suggestStrengthProgression } from '../../domain/strengthProgression'
 import { getStrengthPlanOverride, saveStrengthPlanOverride } from '../../domain/strengthPlanOverrides'
 
-type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void>; prescriptions?: Prescription[] }
+type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void>; prescriptions?: Prescription[]; progressionEnabled?: boolean }
 type NextStrengthPlan = { targetReps: number; addedLoadKg: number }
 
 function previous(workouts: WorkoutLog[], id: ExerciseId) {
@@ -15,17 +15,17 @@ function previous(workouts: WorkoutLog[], id: ExerciseId) {
   }
 }
 
-function makeSet(id: ExerciseId, prev?: SetLog): SetLog {
+function makeSet(id: ExerciseId, prev?: SetLog, progressionEnabled = true): SetLog {
   const variation = prev?.variation ?? 'Strict'
-  const override = getStrengthPlanOverride(id, variation)
+  const override = progressionEnabled ? getStrengthPlanOverride(id, variation) : null
   const targetReps = override?.targetReps ?? prev?.targetReps ?? 6
   return { id: crypto.randomUUID(), exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? prev?.addedLoadKg ?? 0, targetReps, actualReps: 0, rir: prev?.rir ?? 2, completed: false, technique: 'good', notes: '', createdAt: Date.now() }
 }
 
-function makeScheduledSets(prescriptions: Prescription[] = []): SetLog[] {
+function makeScheduledSets(prescriptions: Prescription[] = [], progressionEnabled = true): SetLog[] {
   return prescriptions.filter(p => p.durationMinutes === undefined && !p.optional).flatMap(p => {
     const variation = p.variation
-    const override = getStrengthPlanOverride(p.exerciseId, variation)
+    const override = progressionEnabled ? getStrengthPlanOverride(p.exerciseId, variation) : null
     const targetReps = override?.targetReps ?? p.reps ?? 6
     const addedLoadKg = override?.addedLoadKg ?? p.addedLoadKg
     return Array.from({ length: p.sets ?? 1 }, () => ({
@@ -45,10 +45,10 @@ function formatRest(seconds: number) {
   return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0')
 }
 
-export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, prescriptions = [] }: Props) {
+export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, prescriptions = [], progressionEnabled = true }: Props) {
   const [title, setTitle] = useState(dayLabel === 'Sessione libera' ? 'Allenamento' : dayLabel)
   const [date, setDate] = useState(localDateString())
-  const [sets, setSets] = useState<SetLog[]>(() => { const scheduled = makeScheduledSets(prescriptions); return scheduled.length ? scheduled : [makeSet('pull-up', previous(workouts, 'pull-up'))] })
+  const [sets, setSets] = useState<SetLog[]>(() => { const scheduled = makeScheduledSets(prescriptions, progressionEnabled); return scheduled.length ? scheduled : [makeSet('pull-up', previous(workouts, 'pull-up'), progressionEnabled)] })
   const [selected, setSelected] = useState<ExerciseId>('pull-up')
   const [fatigue, setFatigue] = useState<number | null>(null)
   const [sleepHours, setSleepHours] = useState<number | null>(null)
@@ -165,14 +165,15 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
       <p>Il countdown continua mentre registri la serie successiva. Scegli 1, 1:30, 2 o 3 minuti; pausa e ripresa non azzerano il tempo.</p>
     </section>
 
+    {!progressionEnabled && <div className="deload-banner"><strong>DELOAD · PROGRESSIONE IN PAUSA</strong><span>Questa seduta usa i target alleggeriti del ciclo. Le proposte di aumento sono disattivate; puoi comunque registrare la prestazione reale.</span></div>}
     <div className="logger-section-head"><strong>SERIE E PRESTAZIONI</strong><span>{sets.length} serie</span></div>
     {sets.map((s, i) => <article className="logger-set" key={s.id}><div className="logger-set-head"><strong>Serie {i + 1}</strong><button className="icon-button danger" onClick={() => setSets(xs => xs.filter(x => x.id !== s.id))} aria-label={'Rimuovi serie ' + (i + 1)}><Trash2 size={15} /></button></div>
-      <label>Esercizio<select value={s.exerciseId} onChange={e => { const id = e.target.value as ExerciseId; const p = previous(workouts, id); const variation = p?.variation ?? 'Strict'; const override = getStrengthPlanOverride(id, variation); const targetReps = override?.targetReps ?? p?.targetReps ?? 6; patch(s.id, { exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? p?.addedLoadKg ?? 0, targetReps, actualReps: 0, completed: false }) }}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+      <label>Esercizio<select value={s.exerciseId} onChange={e => { const id = e.target.value as ExerciseId; const p = previous(workouts, id); const variation = p?.variation ?? 'Strict'; const override = progressionEnabled ? getStrengthPlanOverride(id, variation) : null; const targetReps = override?.targetReps ?? p?.targetReps ?? 6; patch(s.id, { exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? p?.addedLoadKg ?? 0, targetReps, actualReps: 0, completed: false }) }}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
       <label>Variante<input value={s.variation} onChange={e => patch(s.id, { variation: e.target.value })} /></label>
       <div className="form-grid"><label>Target<input type="number" min="0" value={s.targetReps} onChange={e => patch(s.id, { targetReps: Math.max(0, Number(e.target.value)) })} /></label><label>Effettive<div className="stepper"><button type="button" onClick={() => patch(s.id, { actualReps: Math.max(0, s.actualReps - 1), completed: true })} aria-label="Meno una ripetizione"><Minus size={14} /></button><input type="number" min="0" value={s.actualReps} onChange={e => patch(s.id, { actualReps: Math.max(0, Number(e.target.value)), completed: true })} /><button type="button" onClick={() => patch(s.id, { actualReps: s.actualReps + 1, completed: true })} aria-label="Più una ripetizione"><Plus size={14} /></button></div></label></div>
       <div className="form-grid"><label>Zavorra<select value={s.addedLoadKg} onChange={e => patch(s.id, { addedLoadKg: Number(e.target.value) })}>{VALID_LOADS_KG.map(v => <option key={v} value={v}>{v} kg</option>)}</select></label><label>RIR<input type="number" min="0" max="10" value={s.rir ?? ''} onChange={e => patch(s.id, { rir: e.target.value === '' ? null : Number(e.target.value) })} /></label></div>
       <div className="form-grid"><label>Tecnica<select value={s.technique} onChange={e => patch(s.id, { technique: e.target.value as SetLog['technique'] })}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label><label className="check-label"><input type="checkbox" checked={s.completed} onChange={e => patch(s.id, { completed: e.target.checked })} /> Completata</label></div><label>Note serie<input value={s.notes} onChange={e => patch(s.id, { notes: e.target.value })} /></label>{(() => {
-        const suggestion = suggestStrengthProgression(workouts, s.exerciseId, s.variation)
+        const suggestion = progressionEnabled ? suggestStrengthProgression(workouts, s.exerciseId, s.variation) : null
         const mode = suggestionModes[s.id]
         if (!suggestion) return null
         if (mode === 'accepted' || mode === 'custom') return <div className="progression-hint"><strong>Prossima seduta aggiornata</strong><span>Il piano per la prossima seduta è stato salvato. Le ripetizioni di questa serie non sono state modificate.</span><button type="button" className="text-action" onClick={() => openProgressionEditor(s, suggestion)}>MODIFICA PROSSIMO TARGET</button></div>
@@ -183,7 +184,7 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
         }
         return <div className="progression-hint"><strong>{suggestion.title}</strong><span>{suggestion.detail}</span><div className="form-grid"><button type="button" className="secondary-button" onClick={() => saveProgressionChoice(s, suggestion, 'suggested')}>ACCETTA</button><button type="button" className="secondary-button" onClick={() => saveProgressionChoice(s, suggestion, 'kept')}>MANTIENI</button></div><button type="button" className="text-action" onClick={() => openProgressionEditor(s, suggestion)}>MODIFICA PROPOSTA</button></div>
       })()}<button type="button" className="rest-after-set" onClick={startRest}><Timer size={14}/> FINE SERIE · AVVIA RECUPERO {formatRest(restDuration)}</button></article>)}
-    <div className="add-set-row"><select value={selected} onChange={e => setSelected(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary-button" onClick={() => setSets(xs => [...xs, makeSet(selected, previous(workouts, selected))])}><Plus size={15} /> AGGIUNGI SERIE</button></div>
+    <div className="add-set-row"><select value={selected} onChange={e => setSelected(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary-button" onClick={() => setSets(xs => [...xs, makeSet(selected, previous(workouts, selected), progressionEnabled)])}><Plus size={15} /> AGGIUNGI SERIE</button></div>
     <div className="logger-section-head"><strong>RECUPERO E FEEDBACK</strong></div><div className="form-grid"><label>Fatica (1–10)<input type="number" min="1" max="10" value={fatigue ?? ''} onChange={e => setFatigue(e.target.value === '' ? null : Number(e.target.value))} /></label><label>Ore di sonno<input type="number" min="0" max="24" step=".5" value={sleepHours ?? ''} onChange={e => setSleepHours(e.target.value === '' ? null : Number(e.target.value))} /></label></div>
     <label>Dolore / fastidi<input value={pain} onChange={e => setPain(e.target.value)} /></label><label>Note sessione<textarea value={notes} onChange={e => setNotes(e.target.value)} /></label><button className="primary-button full" disabled={!sets.length || saving} onClick={() => void submit()}>{saving ? 'SALVATAGGIO...' : 'SALVA SESSIONE'}</button>
   </div></div>
