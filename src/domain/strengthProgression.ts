@@ -1,4 +1,4 @@
-import type { ExerciseId, SetLog, WorkoutLog } from '../types'
+import type { ExerciseId, WorkoutLog } from '../types'
 import { VALID_LOADS_KG } from '../data/program'
 export interface StrengthSuggestion { title:string; detail:string; nextLoadKg?:number; nextRepTarget?:number }
 export function suggestStrengthProgression(history:WorkoutLog[],exerciseId:ExerciseId,variation:string):StrengthSuggestion|null {
