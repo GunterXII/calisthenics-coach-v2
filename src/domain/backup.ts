@@ -57,8 +57,9 @@ export function downloadText(filename: string, content: string, type: string): v
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  anchor.href = url; anchor.download = filename; anchor.click()
-  URL.revokeObjectURL(url)
+  anchor.href = url; anchor.download = filename
+  document.body.appendChild(anchor); anchor.click(); anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 export function toCsv(rows: Array<Record<string, string | number | boolean | null>>): string {
   if (!rows.length) return 'date,title,kind,exercise,variation,addedLoadKg,targetReps,actualReps,rir,completed,technique,notes\n'
@@ -70,9 +71,8 @@ export function toCsv(rows: Array<Record<string, string | number | boolean | nul
   return [columns.map(quote).join(','), ...rows.map(row => columns.map(key => quote(row[key])).join(','))].join('\r\n')
 }
 export function workoutRowsCsv(workouts: WorkoutLog[]) {
-  return toCsv(workouts.flatMap(w => w.setLogs.map(s => ({
-    date:w.date,title:w.title,kind:w.kind,exercise:s.exerciseId,variation:s.variation,
-    addedLoadKg:s.addedLoadKg,targetReps:s.targetReps,actualReps:s.actualReps,
-    rir:s.rir,completed:s.completed,technique:s.technique,notes:s.notes,
-  }))))
+  return toCsv(workouts.flatMap(w => [
+    ...w.setLogs.map(s => ({ date:w.date,title:w.title,kind:w.kind,recordType:'set',exercise:s.exerciseId,variation:s.variation,addedLoadKg:s.addedLoadKg,targetReps:s.targetReps,actualReps:s.actualReps,rir:s.rir,completed:s.completed,technique:s.technique,notes:s.notes })),
+    ...w.emomLogs.flatMap(e => e.minutes.map(m => ({ date:w.date,title:w.title,kind:w.kind,recordType:'emom-minute',exercise:e.exerciseId,variation:e.variation,addedLoadKg:e.addedLoadKg,targetReps:m.targetReps,actualReps:m.actualReps,rir:e.rir,completed:m.completed,technique:e.technique,notes:e.notes }))),
+  ]))
 }
