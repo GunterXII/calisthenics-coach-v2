@@ -254,7 +254,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
         await db.emoms.add(log)
         await db.workouts.add(workout)
       })
-      if (progressionChoice && suggestion) {
+      if (progressionChoice && progressionChoice !== 'editing' && suggestion) {
         const nextReps = progressionChoice === 'accepted'
           ? (suggestion.nextRepsPerMinute ?? repsPerMinute)
           : progressionChoice === 'kept' ? repsPerMinute : nextPlanReps
