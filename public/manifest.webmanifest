@@ -1,0 +1,10 @@
+{
+  "name": "Calisthenics Coach",
+  "short_name": "Coach",
+  "description": "Personal calisthenics training tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "icons": []
+}
