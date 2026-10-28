@@ -7,7 +7,7 @@ import WorkoutLogger from './features/workout/WorkoutLogger'
 import ProgressDashboard from './features/progress/ProgressDashboard'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
-import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, type CycleWeek } from './data/program'
+import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
 
 type Tab = 'today' | 'plan' | 'history' | 'progress'
@@ -52,7 +52,7 @@ export default function App() {
     {showEmom && <EmomRunner onClose={()=>setShowEmom(false)}/>}
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>setEditing(null)} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showQuickLog && <WorkoutLogger workouts={workouts} dayLabel={today.label} onClose={()=>setShowQuickLog(false)} onSave={async entry=>{await db.workouts.add(entry)}}/>}
+    {showQuickLog && <WorkoutLogger workouts={workouts} dayLabel={today.label} prescriptions={(cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions).map(p => prescriptionForWeek(p, cycleWeek))} onClose={()=>setShowQuickLog(false)} onSave={async entry=>{await db.workouts.add(entry)}}/>}
   </div>
 }
 
