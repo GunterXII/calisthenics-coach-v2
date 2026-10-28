@@ -6,6 +6,7 @@ export interface StrengthPlanOverride {
   exerciseId: ExerciseId
   variation: string
   targetReps: number
+  sets?: number
   addedLoadKg: number
   savedAt: number
 }
@@ -19,6 +20,7 @@ function readAll(): StrengthPlanOverride[] {
       typeof (item as StrengthPlanOverride).exerciseId === 'string' &&
       typeof (item as StrengthPlanOverride).variation === 'string' &&
       Number.isFinite((item as StrengthPlanOverride).targetReps) &&
+      ((item as StrengthPlanOverride).sets === undefined || (Number.isFinite((item as StrengthPlanOverride).sets) && Number((item as StrengthPlanOverride).sets) >= 1 && Number((item as StrengthPlanOverride).sets) <= 20)) &&
       Number.isFinite((item as StrengthPlanOverride).addedLoadKg)
     )
   } catch {
