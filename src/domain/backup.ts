@@ -15,9 +15,9 @@ export interface CoachBackup {
   }
 }
 export async function createBackup(): Promise<CoachBackup> {
-  const [workouts, emoms, records] = await Promise.all([
+  const [workouts, emoms, records] = await db.transaction('r', db.workouts, db.emoms, db.records, async () => Promise.all([
     db.workouts.toArray(), db.emoms.toArray(), db.records.toArray(),
-  ])
+  ]))
   let cycleWeek: 1 | 2 | 3 | 4 = 1
   try {
     const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week'))
