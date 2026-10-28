@@ -147,7 +147,7 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
         <div><small>RECUPERO TRA LE SERIE</small><strong>{formatRest(restRemaining)}</strong></div>
         <span className={restRunning ? 'rest-status active' : restRemaining === 0 ? 'rest-status done' : 'rest-status'}>{restRunning ? 'IN CORSO' : restPausedRemaining !== null && restPausedRemaining > 0 ? 'IN PAUSA' : restRemaining === 0 ? 'COMPLETATO' : 'PRONTO'}</span>
       </div>
-      <div className="rest-presets">{[60, 90, 120, 180].map(seconds => <button type="button" key={seconds} className={restDuration === seconds ? 'selected' : ''} disabled={restRunning} onClick={() => { setRestDuration(seconds); setRestPausedRemaining(null) }}>{seconds / 60}:00</button>)}</div>
+      <div className="rest-presets">{[60, 90, 120, 180].map(seconds => <button type="button" key={seconds} className={restDuration === seconds ? 'selected' : ''} disabled={restRunning} onClick={() => { setRestDuration(seconds); setRestPausedRemaining(null) }}>{formatRest(seconds)}</button>)}</div>
       <div className="form-grid">
         <button type="button" className="secondary-button" onClick={restRunning ? pauseRest : startRest}><Timer size={14} /> {restRunning ? 'PAUSA' : restPausedRemaining !== null && restPausedRemaining > 0 ? 'RIPRENDI' : 'AVVIA RECUPERO'}</button>
         <button type="button" className="secondary-button" onClick={resetRest}><RotateCcw size={14} /> RESET</button>
