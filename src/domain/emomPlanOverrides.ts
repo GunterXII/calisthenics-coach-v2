@@ -43,3 +43,14 @@ export function saveEmomPlanOverride(override: EmomPlanOverride) {
     // EMOM registration still works if localStorage is unavailable.
   }
 }
+export function listEmomPlanOverrides() {
+  return readAll()
+}
+
+export function replaceEmomPlanOverrides(overrides: EmomPlanOverride[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides))
+  } catch {
+    // Keep the existing local data if the browser storage is full or unavailable.
+  }
+}
