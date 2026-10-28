@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../database/db'
 import { EXERCISES } from '../../data/program'
 import { suggestEmomProgression } from '../../domain/progression'
+import { getEmomPlanOverride, saveEmomPlanOverride } from '../../domain/emomPlanOverrides'
 import type { EmomLog, ExerciseId } from '../../types'
 
 const DRAFT_KEY = 'calisthenics-coach-v2:active-emom:v1'
@@ -53,11 +54,17 @@ type EmomConfig = { exerciseId: ExerciseId; variation: string; duration: number;
 
 export default function EmomRunner({ onClose, initialConfig }: { onClose: () => void; initialConfig?: EmomConfig }) {
   const [initialDraft] = useState<EmomDraft | null>(readDraft)
-  const [exerciseId, setExerciseId] = useState<ExerciseId>(initialDraft?.exerciseId ?? initialConfig?.exerciseId ?? 'pull-up')
-  const [variation, setVariation] = useState(initialDraft?.variation ?? initialConfig?.variation ?? 'Strict')
-  const [duration, setDuration] = useState(initialDraft?.duration ?? initialConfig?.duration ?? 10)
-  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? 6)
-  const [load, setLoad] = useState(initialDraft?.load ?? initialConfig?.load ?? 0)
+  const defaultExercise = initialDraft?.exerciseId ?? initialConfig?.exerciseId ?? 'pull-up'
+  const defaultVariation = initialDraft?.variation ?? initialConfig?.variation ?? 'Strict'
+  const [exerciseId, setExerciseId] = useState<ExerciseId>(defaultExercise)
+  const [variation, setVariation] = useState(defaultVariation)
+  const [initialPlanOverride] = useState(() => getEmomPlanOverride(defaultExercise, defaultVariation))
+  const [duration, setDuration] = useState(initialDraft?.duration ?? initialPlanOverride?.duration ?? initialConfig?.duration ?? 10)
+  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? initialConfig?.repsPerMinute ?? 6)
+  const [load, setLoad] = useState(initialDraft?.load ?? initialPlanOverride?.load ?? initialConfig?.load ?? 0)
+  const [progressionChoice, setProgressionChoice] = useState<'accepted' | 'kept' | 'editing' | 'custom' | null>(null)
+  const [nextPlanReps, setNextPlanReps] = useState(repsPerMinute)
+  const [nextPlanLoad, setNextPlanLoad] = useState(load)
   const [startedAt, setStartedAt] = useState<number | null>(initialDraft?.startedAt ?? null)
   const [pausedAt, setPausedAt] = useState<number | null>(initialDraft?.pausedAt ?? null)
   const [pauseMs, setPauseMs] = useState(initialDraft?.pauseMs ?? 0)
@@ -89,6 +96,15 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
     const id = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(id)
   }, [running])
+
+  useEffect(() => {
+    if (startedAt !== null || initialDraft) return
+    const saved = getEmomPlanOverride(exerciseId, variation)
+    if (!saved) return
+    setDuration(saved.duration)
+    setRepsPerMinute(saved.repsPerMinute)
+    setLoad(saved.load)
+  }, [exerciseId, variation, startedAt, initialDraft])
 
   // Chiude automaticamente i minuti scaduti. Se è stata digitata una prestazione,
   // la usa per il minuto corrente; i minuti non inseriti vengono marcati come saltati.
@@ -246,8 +262,15 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
     addedLoadKg: load, minutes, startedAt: startedAt ?? Date.now(), endedAt: null,
     pausedAt, accumulatedPauseMs: pauseMs, rir, technique, notes,
   }
-  const suggestion = startedAt !== null && (complete || minutes.length >= duration) ? suggestEmomProgression(preview, cleanStreak) : null
+  const suggestion = startedAt !== null && complete ? suggestEmomProgression(preview, cleanStreak) : null
   const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
+  const saveNextPlan = (mode: 'accepted' | 'kept' | 'custom') => {
+    if (!suggestion) return
+    const nextReps = mode === 'accepted' ? (suggestion.nextRepsPerMinute ?? repsPerMinute) : mode === 'custom' ? nextPlanReps : repsPerMinute
+    const nextLoad = mode === 'accepted' ? (suggestion.nextLoadKg ?? load) : mode === 'custom' ? nextPlanLoad : load
+    saveEmomPlanOverride({ exerciseId, variation, duration, repsPerMinute: nextReps, load: nextLoad, savedAt: Date.now() })
+    setProgressionChoice(mode)
+  }
 
   return <div className="modal-backdrop"><div className="modal emom-modal">
     <div className="modal-head"><div><div className="eyebrow">SESSIONE STRUTTURATA</div><h2>EMOM runner</h2></div><button className="close-button" onClick={onClose} aria-label="Chiudi; sessione salvata automaticamente">×</button></div>
@@ -293,7 +316,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
       {complete && <p className="muted">Tempo terminato. Controlla il riepilogo minuto per minuto, poi salva la sessione.</p>}
       <div className="form-grid"><label>RIR finale<input type="number" min="0" max="10" value={rir} onChange={e => setRir(Math.min(10, Math.max(0, Number(e.target.value) || 0)))} /></label><label>Tecnica<select value={technique} onChange={e => setTechnique(e.target.value as EmomLog['technique'])}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label></div>
       <label>Note<input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Sensazioni, recupero..." /></label>
-      {suggestion && <div className="progression-hint emom-progression"><strong>Prossima progressione: {suggestion.title}</strong><span>{suggestion.reason}</span></div>}
+      {suggestion && <div className="progression-hint emom-progression"><strong>Prossima progressione: {suggestion.title}</strong><span>{suggestion.reason}</span>{progressionChoice === 'accepted' || progressionChoice === 'kept' || progressionChoice === 'custom' ? <><span className="progression-saved-note">{progressionChoice === 'accepted' ? 'Proposta accettata' : progressionChoice === 'kept' ? 'Livello attuale mantenuto' : 'Valori personalizzati salvati'} per la prossima sessione di questa variante.</span><button type="button" className="text-action" onClick={() => { setNextPlanReps(suggestion.nextRepsPerMinute ?? repsPerMinute); setNextPlanLoad(suggestion.nextLoadKg ?? load); setProgressionChoice('editing') }}>MODIFICA PROSSIMO TARGET</button></> : null}{progressionChoice === 'editing' ? <><div className="form-grid"><label>Prossime reps/min<input type="number" min="1" max="100" value={nextPlanReps} onChange={event => setNextPlanReps(Math.min(100, Math.max(1, Number(event.target.value) || 1)))}/></label><label>Prossima zavorra<select value={nextPlanLoad} onChange={event => setNextPlanLoad(Number(event.target.value))}>{[0,5,10,15,20,25,30].map(value => <option key={value} value={value}>{value} kg</option>)}</select></label></div><button type="button" className="secondary-button" onClick={() => saveNextPlan('custom')}>SALVA PROSSIMO TARGET</button></> : null}{progressionChoice === null ? <div className="form-grid"><button type="button" className="secondary-button" onClick={() => saveNextPlan('accepted')}>ACCETTA</button><button type="button" className="secondary-button" onClick={() => saveNextPlan('kept')}>MANTIENI</button></div> : null}{progressionChoice === null ? <button type="button" className="text-action" onClick={() => { setNextPlanReps(suggestion.nextRepsPerMinute ?? repsPerMinute); setNextPlanLoad(suggestion.nextLoadKg ?? load); setProgressionChoice('editing') }}>MODIFICA PROPOSTA</button> : null}</div>}
       <p className="muted emom-resume-note">Sessione salvata automaticamente come bozza su questo dispositivo. Chiudendo la finestra potrai riprenderla dal punto in cui eri, con il tempo aggiornato.</p>
     </>}
   </div></div>
