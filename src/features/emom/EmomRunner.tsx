@@ -270,7 +270,7 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
         <div className="minute-log-head"><strong>Ripetizioni per minuto</strong><span>{minutes.filter(m => !m.skipped).length}/{duration} registrati · {totalLoggedReps} reps</span></div>
         <div className="minute-dots">{Array.from({ length: duration }, (_, i) => {
           const item = minutes.find(m => m.minute === i + 1)
-          return <div key={i} className={'minute-result ' + (item ? item.skipped ? 'missed' : item.completed ? 'done' : 'partial')}>
+          return <div key={i} className={'minute-result ' + (item ? (item.skipped ? 'missed' : item.completed ? 'done' : 'partial') : '')}>
             <small>M{i + 1}</small><strong>{item ? item.actualReps : '—'}</strong><span>{item ? 'rep' : repsPerMinute + ' target'}</span>
           </div>
         })}</div>
