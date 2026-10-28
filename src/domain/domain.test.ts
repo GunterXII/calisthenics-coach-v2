@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { suggestEmomProgression } from './progression'
 import { getRecoveryAlerts } from './recovery'
 import { parseBackup } from './backup'
+import { suggestStrengthProgression } from './strengthProgression'
+import { prescriptionForWeek, TRAINING_WEEK } from '../data/program'
 import type { EmomLog, WorkoutLog } from '../types'
 
 function emom(overrides: Partial<EmomLog> = {}): EmomLog {
@@ -32,7 +34,7 @@ function emom(overrides: Partial<EmomLog> = {}): EmomLog {
   }
 }
 
-function workout(id: string, date: string, reps: number, options: { sleepHours?: number | null; pain?: string } = {}): WorkoutLog {
+function workout(id: string, date: string, reps: number, options: { sleepHours?: number | null; pain?: string; fatigue?: number | null; addedLoadKg?: number } = {}): WorkoutLog {
   return {
     id,
     date,
@@ -43,7 +45,7 @@ function workout(id: string, date: string, reps: number, options: { sleepHours?:
       id: 'set-' + id,
       exerciseId: 'pull-up',
       variation: 'Strict',
-      addedLoadKg: 0,
+      addedLoadKg: options.addedLoadKg ?? 0,
       targetReps: reps,
       actualReps: reps,
       rir: 2,
@@ -53,7 +55,7 @@ function workout(id: string, date: string, reps: number, options: { sleepHours?:
       createdAt: Date.parse(date + 'T18:00:00Z'),
     }],
     emomLogs: [],
-    fatigue: null,
+    fatigue: options.fatigue ?? null,
     sleepHours: options.sleepHours ?? null,
     pain: options.pain ?? '',
     notes: '',
@@ -111,6 +113,39 @@ describe('recovery alerts', () => {
     expect(alerts.map(alert => alert.id)).toContain('pain')
     expect(alerts.map(alert => alert.id)).toContain('sleep')
     expect(JSON.stringify(recent)).toBe(snapshot)
+  })
+
+  it('does not infer a decline when load changed between sessions', () => {
+    const alerts = getRecoveryAlerts([
+      workout('newest-heavy', '2026-10-28', 8, { addedLoadKg: 10 }),
+      workout('middle', '2026-10-27', 10, { addedLoadKg: 5 }),
+      workout('oldest', '2026-10-26', 12, { addedLoadKg: 0 }),
+    ])
+    expect(alerts.some(alert => alert.id === 'decline')).toBe(false)
+  })
+
+  it('flags high perceived fatigue', () => {
+    const alerts = getRecoveryAlerts([workout('fatigued', '2026-10-28', 8, { fatigue: 9 })])
+    expect(alerts.map(alert => alert.id)).toContain('fatigue')
+  })
+})
+
+describe('strength progression rules', () => {
+  it('suggests a load step only when the prior target was cleanly achieved', () => {
+    const history = [workout('strength', '2026-10-28', 8)]
+    const suggestion = suggestStrengthProgression(history, 'pull-up', 'Strict')
+    expect(suggestion?.nextRepTarget).toBe(9)
+  })
+})
+
+describe('weekly program', () => {
+  it('reduces two-set back-off exercises in deload week and respects plate increments', () => {
+    const monday = TRAINING_WEEK.find(day => day.id === 'mon')
+    const backoff = monday?.prescriptions.find(item => item.title.includes('back-off'))
+    expect(backoff).toBeDefined()
+    const deload = prescriptionForWeek(backoff!, 4)
+    expect(deload.sets).toBe(1)
+    expect(deload.addedLoadKg).toBe(15)
   })
 })
 
