@@ -162,9 +162,14 @@ describe('strength progression rules', () => {
 })
 
 describe('weekly program', () => {
+  it('matches the athlete schedule: Tue, Wed, Fri, Sat, Sun', () => {
+    expect(TRAINING_WEEK.map(day => day.label)).toEqual(['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'])
+    expect(TRAINING_WEEK.filter(day => day.prescriptions.length).map(day => day.label)).toEqual(['Martedì', 'Mercoledì', 'Venerdì', 'Sabato', 'Domenica'])
+  })
+
   it('reduces two-set back-off exercises in deload week and respects plate increments', () => {
-    const monday = TRAINING_WEEK.find(day => day.id === 'mon')
-    const backoff = monday?.prescriptions.find(item => item.title.includes('back-off'))
+    const pullDay = TRAINING_WEEK.find(day => day.id === 'tue')
+    const backoff = pullDay?.prescriptions.find(item => item.title.includes('back-off'))
     expect(backoff).toBeDefined()
     const deload = prescriptionForWeek(backoff!, 4)
     expect(deload.sets).toBe(1)
