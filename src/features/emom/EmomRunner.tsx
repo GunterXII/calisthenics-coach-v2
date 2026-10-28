@@ -271,7 +271,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
     addedLoadKg: load, minutes, startedAt: startedAt ?? Date.now(), endedAt: null,
     pausedAt, accumulatedPauseMs: pauseMs, rir, technique, notes,
   }
-  const suggestion = startedAt !== null && complete ? suggestEmomProgression(preview, cleanStreak) : null
+  const suggestion = startedAt !== null && complete && minutes.length >= duration ? suggestEmomProgression(preview, cleanStreak) : null
   const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
   const saveNextPlan = (mode: 'accepted' | 'kept' | 'custom') => {
     if (!suggestion) return
