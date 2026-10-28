@@ -13,7 +13,7 @@ export default function DataManagement({ workouts, onRestored }: { workouts: Wor
       const backup = await createBackup()
       const stamp = new Date().toISOString().slice(0,10)
       downloadText(`calisthenics-coach-backup-${stamp}.json`, JSON.stringify(backup,null,2), 'application/json')
-      setMessage(`Backup creato: ${backup.data.workouts.length} sessioni, ${backup.data.emoms.length} EMOM, ${backup.data.records.length} test, ${backup.settings.strengthPlanOverrides.length + backup.settings.emomPlanOverrides.length} progressioni e settimana ${backup.settings.cycleWeek}/4.`)
+      setMessage(`Backup creato: ${backup.data.sessions.length} allenamenti cronometrati, ${backup.data.workouts.length} registrazioni, ${backup.data.emoms.length} EMOM, ${backup.data.records.length} test, ${backup.settings.strengthPlanOverrides.length + backup.settings.emomPlanOverrides.length} progressioni e settimana ${backup.settings.cycleWeek}/4.`)
     } catch { setMessage('Esportazione non riuscita. Riprova.') }
     finally { setBusy(false) }
   }
@@ -28,7 +28,7 @@ export default function DataManagement({ workouts, onRestored }: { workouts: Wor
       const parsed = parseBackup(JSON.parse(await file.text()))
       const counts = parsed.data
       const confirmed = window.confirm(
-        `Ripristinare questo backup del ${new Date(parsed.exportedAt).toLocaleString('it-IT')}?\n\n${counts.workouts.length} sessioni · ${counts.emoms.length} EMOM · ${counts.records.length} test\n\nATTENZIONE: i dati attualmente presenti su questo dispositivo verranno sostituiti integralmente.`
+        `Ripristinare questo backup del ${new Date(parsed.exportedAt).toLocaleString('it-IT')}?\n\n${counts.sessions.length} allenamenti cronometrati · ${counts.workouts.length} registrazioni · ${counts.emoms.length} EMOM · ${counts.records.length} test\n\nATTENZIONE: i dati attualmente presenti su questo dispositivo verranno sostituiti integralmente.`
       )
       if (!confirmed) return
       await restoreBackup(parsed)

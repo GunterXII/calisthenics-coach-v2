@@ -5,5 +5,6 @@ export interface SetLog { id: string; exerciseId: ExerciseId; variation: string;
 export interface EmomMinute { minute: number; targetReps: number; actualReps: number; skipped: boolean; completed: boolean }
 export interface EmomLog { id: string; exerciseId: ExerciseId; variation: string; durationMinutes: number; repsPerMinute: number; addedLoadKg: number; minutes: EmomMinute[]; startedAt: number; endedAt: number | null; pausedAt: number | null; accumulatedPauseMs: number; rir: number | null; technique: 'good' | 'degraded' | 'pain'; notes: string }
 export interface WorkoutLog { id: string; date: string; dayLabel: string; kind: SessionKind; title: string; setLogs: SetLog[]; emomLogs: EmomLog[]; fatigue: number | null; sleepHours: number | null; pain: string; notes: string; completedAt: number | null }
+export interface TrainingSession { id: string; date: string; startedAt: number; endedAt: number; durationSeconds: number; loggedEntries: number; totalReps: number }
 export interface PersonalRecord { id: string; exerciseId: ExerciseId; reps: number; testedAt: number; notes: string }
 export interface ProgressionSuggestion { action: 'increase-reps' | 'maintain' | 'reduce-reps' | 'consider-load'; title: string; reason: string; nextRepsPerMinute?: number; nextLoadKg?: number }

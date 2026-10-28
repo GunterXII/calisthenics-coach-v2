@@ -149,3 +149,48 @@
 .plan-line-actions>small{white-space:nowrap;text-align:right;font-size:9px}
 .plan-line-actions .secondary-button{display:flex;align-items:center;justify-content:center}
 @media(max-width:380px){.plan-line-actions{min-width:88px}.plan-line-actions>small{font-size:8px}.plan-edit-toggle{padding:8px 6px}}
+
+
+/* Workout session controller: one obvious main action and clean secondary tools. */
+.workout-session-panel{display:grid;gap:16px;margin:22px 0 30px;padding:15px;background:#111317;border:1px solid #30343b;border-radius:16px}
+.workout-session-start{display:grid;gap:12px}
+.workout-session-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.workout-session-heading .eyebrow{margin:0 0 8px}
+.workout-session-heading h3{font-size:19px;letter-spacing:-.5px;margin:0 0 6px;color:#f4f5f6}
+.workout-session-heading p{font-size:11px;line-height:1.55;color:#8e939c;margin:0;max-width:440px}
+.workout-start-button{margin-top:0;min-height:52px;font-size:11px}
+.workout-session-live{display:grid;gap:12px}
+.workout-session-heading>div{display:grid;gap:3px}
+.session-status{flex:0 0 auto;border:1px solid #444a54;border-radius:99px;color:#b0b5bd;font-size:8px;letter-spacing:1px;padding:6px 9px}
+.session-status.active{color:#d0d4da;background:#25282d;border-color:#666d77}
+.workout-stopwatch{display:flex;align-items:center;gap:12px;padding:15px 12px;background:#090a0c;border:1px solid #30343b;border-radius:12px;color:#c3c8d0}
+.workout-stopwatch strong{font-size:clamp(35px,10vw,48px);line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums;color:#f4f5f6}
+.workout-session-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.workout-session-controls button{display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 7px;font-size:8px;letter-spacing:.6px;margin-top:0}
+.finish-session-button{border:1px solid #484e57;border-radius:10px;background:#24272d;color:#f4f5f6;font-weight:800;cursor:pointer}
+.session-tools-heading{display:grid;gap:4px;border-top:1px solid #30343b;padding-top:13px}
+.session-tools-heading>span{font-size:9px;letter-spacing:1.1px;color:#d0d4da;font-weight:800}
+.session-tools-heading small{font-size:9px;line-height:1.4;color:#777d86}
+.session-tool-list{display:grid;gap:7px}
+.session-tool{display:flex;align-items:center;gap:11px;width:100%;min-width:0;text-align:left;padding:12px;border:1px solid #2d3139;border-radius:11px;background:#1a1d22;color:#f4f5f6;cursor:pointer}
+.session-tool:active{background:#25282d}
+.session-tool-icon{width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;border:1px solid #404650;border-radius:10px;color:#d0d4da;background:#22262c}
+.session-tool-copy{display:grid;gap:4px;flex:1;min-width:0}
+.session-tool-copy strong{font-size:11px;font-weight:700;line-height:1.35}
+.session-tool-copy small{font-size:9px;color:#9ba1ab;line-height:1.4}
+.session-tool-arrow{flex:0 0 auto;color:#747b85}
+.last-session-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 2px 0;border-top:1px solid #30343b}
+.last-session-summary>div{display:grid;gap:4px}
+.last-session-summary span{font-size:8px;font-weight:800;letter-spacing:1px;color:#9ca3ad}
+.last-session-summary small{font-size:9px;color:#7d848e}
+.last-session-summary>strong{font-size:13px;color:#f4f5f6;white-space:nowrap}
+.session-history-heading{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+.session-history-heading .eyebrow{margin-bottom:5px}
+.session-history-heading h2{font-size:19px;margin:0}
+.session-history-list{display:grid;gap:8px;margin-bottom:22px}
+.session-history-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;background:#15171b;border:1px solid #30343b;border-radius:11px}
+.session-history-card>div{display:grid;gap:5px;min-width:0}
+.session-history-card strong{font-size:11px}
+.session-history-card small{font-size:9px;color:#858b95;line-height:1.45}
+.session-history-card>b{font-size:13px;white-space:nowrap;color:#d0d4da;font-variant-numeric:tabular-nums}
+@media(max-width:380px){.workout-session-panel{padding:12px}.workout-session-controls{grid-template-columns:1fr}.workout-stopwatch strong{font-size:34px}.session-tool{padding:10px;gap:9px}}

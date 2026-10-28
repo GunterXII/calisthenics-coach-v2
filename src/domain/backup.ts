@@ -1,5 +1,5 @@
 import { db } from '../database/db'
-import type { EmomLog, PersonalRecord, WorkoutLog, ExerciseId } from '../types'
+import type { EmomLog, PersonalRecord, TrainingSession, WorkoutLog, ExerciseId } from '../types'
 import { listStrengthPlanOverrides, replaceStrengthPlanOverrides, type StrengthPlanOverride } from './strengthPlanOverrides'
 import { listEmomPlanOverrides, replaceEmomPlanOverrides, type EmomPlanOverride } from './emomPlanOverrides'
 
@@ -7,7 +7,7 @@ export interface CoachBackup {
   app: 'calisthenics-coach-v2'
   schemaVersion: 2
   exportedAt: string
-  data: { workouts: WorkoutLog[]; emoms: EmomLog[]; records: PersonalRecord[] }
+  data: { workouts: WorkoutLog[]; emoms: EmomLog[]; records: PersonalRecord[]; sessions: TrainingSession[] }
   settings: {
     strengthPlanOverrides: StrengthPlanOverride[]
     emomPlanOverrides: EmomPlanOverride[]
@@ -15,8 +15,8 @@ export interface CoachBackup {
   }
 }
 export async function createBackup(): Promise<CoachBackup> {
-  const [workouts, emoms, records] = await db.transaction('r', db.workouts, db.emoms, db.records, async () => Promise.all([
-    db.workouts.toArray(), db.emoms.toArray(), db.records.toArray(),
+  const [workouts, emoms, records, sessions] = await db.transaction('r', db.workouts, db.emoms, db.records, db.trainingSessions, async () => Promise.all([
+    db.workouts.toArray(), db.emoms.toArray(), db.records.toArray(), db.trainingSessions.toArray(),
   ]))
   let cycleWeek: 1 | 2 | 3 | 4 = 1
   try {
@@ -27,7 +27,7 @@ export async function createBackup(): Promise<CoachBackup> {
     app: 'calisthenics-coach-v2',
     schemaVersion: 2,
     exportedAt: new Date().toISOString(),
-    data: { workouts, emoms, records },
+    data: { workouts, emoms, records, sessions },
     settings: {
       strengthPlanOverrides: listStrengthPlanOverrides(),
       emomPlanOverrides: listEmomPlanOverrides(),
@@ -64,14 +64,15 @@ export function parseBackup(value: unknown): CoachBackup {
   }
   if (typeof value.exportedAt !== 'string') throw new Error('Il backup non contiene una data di esportazione valida.')
   const { workouts, emoms, records } = value.data
-  if (!Array.isArray(workouts) || !Array.isArray(emoms) || !Array.isArray(records)) {
+  const sessions = value.data.sessions === undefined ? [] : value.data.sessions
+  if (!Array.isArray(workouts) || !Array.isArray(emoms) || !Array.isArray(records) || !Array.isArray(sessions)) {
     throw new Error('Il backup è incompleto: mancano una o più raccolte.')
   }
-  if (![...workouts, ...emoms, ...records].every(hasId)) {
+  if (![...workouts, ...emoms, ...records, ...sessions].every(hasId)) {
     throw new Error('Il backup contiene record senza identificativo valido.')
   }
   const ids = (rows: unknown[]) => new Set(rows.map(row => (row as {id:string}).id)).size === rows.length
-  if (!ids(workouts) || !ids(emoms) || !ids(records)) throw new Error('Il backup contiene identificativi duplicati.')
+  if (!ids(workouts) || !ids(emoms) || !ids(records) || !ids(sessions)) throw new Error('Il backup contiene identificativi duplicati.')
   for (const w of workouts) {
     if (!isObject(w) || typeof w.date !== 'string' || !Array.isArray(w.setLogs) || !Array.isArray(w.emomLogs)) throw new Error('Una sessione di allenamento non è valida.')
   }
@@ -80,6 +81,9 @@ export function parseBackup(value: unknown): CoachBackup {
   }
   for (const r of records) {
     if (!isObject(r) || typeof r.exerciseId !== 'string' || typeof r.reps !== 'number' || typeof r.testedAt !== 'number') throw new Error('Un record personale non è valido.')
+  }
+  for (const s of sessions) {
+    if (!isObject(s) || typeof s.date !== 'string' || !Number.isFinite(s.startedAt) || !Number.isFinite(s.endedAt) || !Number.isFinite(s.durationSeconds) || Number(s.durationSeconds) < 0 || !Number.isFinite(s.loggedEntries) || Number(s.loggedEntries) < 0 || !Number.isFinite(s.totalReps) || Number(s.totalReps) < 0) throw new Error('Una sessione cronometrata non è valida.')
   }
 
   let strengthPlanOverrides: StrengthPlanOverride[] = []
@@ -106,17 +110,19 @@ export function parseBackup(value: unknown): CoachBackup {
       workouts: workouts as WorkoutLog[],
       emoms: emoms as EmomLog[],
       records: records as PersonalRecord[],
+      sessions: sessions as TrainingSession[],
     },
     settings: { strengthPlanOverrides, emomPlanOverrides, cycleWeek },
   }
 }
 export async function restoreBackup(backup: CoachBackup): Promise<void> {
-  await db.transaction('rw', db.workouts, db.emoms, db.records, async () => {
-    await Promise.all([db.workouts.clear(), db.emoms.clear(), db.records.clear()])
+  await db.transaction('rw', db.workouts, db.emoms, db.records, db.trainingSessions, async () => {
+    await Promise.all([db.workouts.clear(), db.emoms.clear(), db.records.clear(), db.trainingSessions.clear()])
     await Promise.all([
       db.workouts.bulkAdd(backup.data.workouts),
       db.emoms.bulkAdd(backup.data.emoms),
       db.records.bulkAdd(backup.data.records),
+      db.trainingSessions.bulkAdd(backup.data.sessions),
     ])
   })
   replaceStrengthPlanOverrides(backup.settings.strengthPlanOverrides)

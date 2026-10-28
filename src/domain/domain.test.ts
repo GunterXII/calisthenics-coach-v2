@@ -188,6 +188,17 @@ describe('backup validation', () => {
     expect(backup.schemaVersion).toBe(2)
     expect(backup.settings.cycleWeek).toBe(1)
     expect(backup.settings.strengthPlanOverrides).toHaveLength(0)
+    expect(backup.data.sessions).toHaveLength(0)
+  })
+
+  it('preserves a completed stopwatch session in a version 2 backup', () => {
+    const backup = parseBackup({
+      app: 'calisthenics-coach-v2', schemaVersion: 2, exportedAt: '2026-10-28T12:00:00.000Z',
+      data: { workouts: [], emoms: [], records: [], sessions: [{ id: 'timer-1', date: '2026-10-28', startedAt: 1000, endedAt: 19000, durationSeconds: 18, loggedEntries: 3, totalReps: 30 }] },
+      settings: { strengthPlanOverrides: [], emomPlanOverrides: [], cycleWeek: 1 },
+    })
+    expect(backup.data.sessions).toHaveLength(1)
+    expect(backup.data.sessions[0].durationSeconds).toBe(18)
   })
 
   it('rejects duplicate record identifiers', () => {
