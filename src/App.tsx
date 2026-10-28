@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, Timer, TrendingUp, Pencil, Trash2 } from 'lucide-react'
+import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, Timer, Pencil, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
 import WorkoutLogger from './features/workout/WorkoutLogger'
+import ProgressDashboard from './features/progress/ProgressDashboard'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
 
@@ -39,7 +40,7 @@ export default function App() {
       </section>}
       {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">Settimana tipo · 3 settimane di carico + 1 di deload.</p>{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{day.prescriptions.length ? day.prescriptions.map((p,i)=><div className="plan-line" key={i}><span>{p.title}</span><small>{p.durationMinutes ? `${p.durationMinutes}×${p.repsPerMinute}` : `${p.sets}×${p.reps}`} · {p.addedLoadKg} kg</small></div>) : <small className="muted">Riposo</small>}</div>)}</section>}
       {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>setEditing(structuredClone(w))}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}</section>}
-      {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><div className="stats-grid"><Stat label="PULL-UP TARGET" value="30"/><Stat label="DIP TARGET" value="64"/><Stat label="PUSH-UP TARGET" value="100"/></div><div className="empty-state"><TrendingUp size={22}/><p>Registra test massimali e allenamenti per costruire il tuo storico.</p></div></section>}
+      {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><ProgressDashboard workouts={workouts}/></section>}
     </main>
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
     {showEmom && <EmomRunner onClose={()=>setShowEmom(false)}/>}
