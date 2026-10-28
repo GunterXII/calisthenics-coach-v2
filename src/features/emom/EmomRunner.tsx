@@ -1,84 +1,298 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../database/db'
 import { EXERCISES } from '../../data/program'
+import { suggestEmomProgression } from '../../domain/progression'
 import type { EmomLog, ExerciseId } from '../../types'
 
+const DRAFT_KEY = 'calisthenics-coach-v2:active-emom:v1'
+
+interface EmomDraft {
+  version: 1
+  exerciseId: ExerciseId
+  variation: string
+  duration: number
+  repsPerMinute: number
+  load: number
+  startedAt: number | null
+  pausedAt: number | null
+  pauseMs: number
+  minutes: EmomLog['minutes']
+  activeInputMinute: number
+  actualInput: string
+  actualTouched: boolean
+  rir: number
+  technique: EmomLog['technique']
+  notes: string
+}
+
+function readDraft(): EmomDraft | null {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const value = JSON.parse(raw) as Partial<EmomDraft>
+    if (value.version !== 1 || !Array.isArray(value.minutes)) return null
+    return value as EmomDraft
+  } catch {
+    return null
+  }
+}
+
+function formatClock(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds))
+  return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0')
+}
+
+function isClean(log: EmomLog) {
+  return log.minutes.length === log.durationMinutes &&
+    log.minutes.every(m => !m.skipped && m.actualReps >= m.targetReps) &&
+    log.technique === 'good' && (log.rir ?? 0) >= 2
+}
+
 export default function EmomRunner({ onClose }: { onClose: () => void }) {
-  const [exerciseId, setExerciseId] = useState<ExerciseId>('pull-up')
-  const [variation, setVariation] = useState('Strict')
-  const [duration, setDuration] = useState(10)
-  const [repsPerMinute, setRepsPerMinute] = useState(6)
-  const [load, setLoad] = useState(0)
-  const [startedAt, setStartedAt] = useState<number | null>(null)
-  const [pausedAt, setPausedAt] = useState<number | null>(null)
-  const [pauseMs, setPauseMs] = useState(0)
+  const [initialDraft] = useState<EmomDraft | null>(readDraft)
+  const [exerciseId, setExerciseId] = useState<ExerciseId>(initialDraft?.exerciseId ?? 'pull-up')
+  const [variation, setVariation] = useState(initialDraft?.variation ?? 'Strict')
+  const [duration, setDuration] = useState(initialDraft?.duration ?? 10)
+  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? 6)
+  const [load, setLoad] = useState(initialDraft?.load ?? 0)
+  const [startedAt, setStartedAt] = useState<number | null>(initialDraft?.startedAt ?? null)
+  const [pausedAt, setPausedAt] = useState<number | null>(initialDraft?.pausedAt ?? null)
+  const [pauseMs, setPauseMs] = useState(initialDraft?.pauseMs ?? 0)
   const [now, setNow] = useState(Date.now())
-  const [minutes, setMinutes] = useState<EmomLog['minutes']>([])
-  const [actual, setActual] = useState(6)
-  const [rir, setRir] = useState(2)
-  const [technique, setTechnique] = useState<EmomLog['technique']>('good')
-  const [notes, setNotes] = useState('')
-  const running = startedAt !== null && pausedAt === null
+  const [minutes, setMinutes] = useState<EmomLog['minutes']>(initialDraft?.minutes ?? [])
+  const [activeInputMinute, setActiveInputMinute] = useState(initialDraft?.activeInputMinute ?? 1)
+  const [actualInput, setActualInput] = useState(initialDraft?.actualInput ?? '')
+  const [actualTouched, setActualTouched] = useState(initialDraft?.actualTouched ?? false)
+  const [rir, setRir] = useState(initialDraft?.rir ?? 2)
+  const [technique, setTechnique] = useState<EmomLog['technique']>(initialDraft?.technique ?? 'good')
+  const [notes, setNotes] = useState(initialDraft?.notes ?? '')
+  const [saving, setSaving] = useState(false)
+  const history = useLiveQuery(() => db.emoms.orderBy('startedAt').reverse().toArray(), []) ?? []
+
+  const elapsedMs = startedAt === null ? 0 : Math.max(0, (pausedAt ?? now) - startedAt - pauseMs)
+  const elapsedSeconds = Math.floor(elapsedMs / 1000)
+  const completedMinutes = Math.min(duration, Math.floor(elapsedSeconds / 60))
+  const currentMinute = startedAt === null ? 1 : Math.min(duration, completedMinutes + 1)
+  const complete = startedAt !== null && elapsedSeconds >= duration * 60
+  const running = startedAt !== null && pausedAt === null && !complete
+  const totalRemaining = Math.max(0, duration * 60 - elapsedSeconds)
+  const minuteRemaining = startedAt === null ? 60 : complete ? 0 : 60 - (elapsedSeconds % 60)
+  const progress = Math.min(100, (elapsedSeconds / (duration * 60)) * 100)
+  const totalClock = useMemo(() => formatClock(totalRemaining), [totalRemaining])
+  const minuteClock = useMemo(() => formatClock(minuteRemaining), [minuteRemaining])
+
   useEffect(() => {
     if (!running) return
     const id = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(id)
   }, [running])
-  const elapsedMs = startedAt === null ? 0 : Math.max(0, (pausedAt ?? now) - startedAt - pauseMs)
-  const elapsedSeconds = Math.floor(elapsedMs / 1000)
-  const currentMinute = Math.min(duration, Math.floor(elapsedSeconds / 60) + 1)
-  const remaining = Math.max(0, duration * 60 - elapsedSeconds)
-  const progress = Math.min(100, elapsedSeconds / (duration * 60) * 100)
-  const clock = useMemo(() => `${String(Math.floor(remaining / 60)).padStart(2,'0')}:${String(remaining % 60).padStart(2,'0')}`, [remaining])
-  const begin = () => { const t = Date.now(); setStartedAt(t); setNow(t); setActual(repsPerMinute) }
-  const pause = () => setPausedAt(Date.now())
-  const resume = () => { if (pausedAt) setPauseMs(v => v + Date.now() - pausedAt); setPausedAt(null); setNow(Date.now()) }
-  const recordMinute = (skipped = false) => {
-    const minute = Math.min(duration, Math.max(1, currentMinute))
-    setMinutes(prev => {
-      const next = [...prev.filter(m => m.minute !== minute), { minute, targetReps: repsPerMinute, actualReps: skipped ? 0 : actual, skipped, completed: !skipped && actual >= repsPerMinute }].sort((a,b)=>a.minute-b.minute)
-      return next
+
+  // Chiude automaticamente i minuti scaduti. Se è stata digitata una prestazione,
+  // la usa per il minuto corrente; i minuti non inseriti vengono marcati come saltati.
+  useEffect(() => {
+    if (startedAt === null || completedMinutes < 1) return
+    setMinutes(previous => {
+      const known = new Set(previous.map(m => m.minute))
+      const next = [...previous]
+      for (let minute = 1; minute <= completedMinutes; minute += 1) {
+        if (known.has(minute)) continue
+        const hasInput = minute === activeInputMinute && actualTouched
+        const actual = hasInput ? Math.max(0, Number(actualInput) || 0) : 0
+        next.push({
+          minute,
+          targetReps: repsPerMinute,
+          actualReps: actual,
+          skipped: !hasInput,
+          completed: hasInput && actual >= repsPerMinute,
+        })
+        known.add(minute)
+      }
+      return next.sort((a, b) => a.minute - b.minute)
     })
-    setActual(repsPerMinute)
-  }
-  const finish = async () => {
-    if (startedAt === null) return
-    const log: EmomLog = { id: crypto.randomUUID(), exerciseId, variation, durationMinutes: duration, repsPerMinute, addedLoadKg: load, minutes, startedAt, endedAt: Date.now(), pausedAt: null, accumulatedPauseMs: pauseMs, rir, technique, notes }
-    await db.emoms.add(log)
-    const workout = {
-      id: crypto.randomUUID(),
-      date: new Date(startedAt).toISOString().slice(0, 10),
-      dayLabel: 'Sessione EMOM',
-      kind: 'emom' as const,
-      title: `${EXERCISES.find(e => e.id === exerciseId)?.name ?? 'EMOM'} · ${duration} min`,
-      setLogs: [],
-      emomLogs: [log],
-      fatigue: null,
-      sleepHours: null,
-      pain: technique === 'pain' ? 'Dolore segnalato durante EMOM' : '',
-      notes,
-      completedAt: Date.now(),
+    if (activeInputMinute <= completedMinutes) {
+      setActualInput('')
+      setActualTouched(false)
+      setActiveInputMinute(Math.min(duration, completedMinutes + 1))
     }
-    await db.workouts.add(workout)
-    onClose()
+  }, [completedMinutes, startedAt])
+
+  // Draft locale scritto a ogni modifica significativa: chiudere o ricaricare la pagina
+  // non elimina la sessione. Al riavvio il cronometro recupera il tempo reale trascorso.
+  useEffect(() => {
+    const draft: EmomDraft = {
+      version: 1, exerciseId, variation, duration, repsPerMinute, load, startedAt,
+      pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes,
+    }
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    } catch {
+      // Il timer continua a funzionare anche se lo storage non è disponibile.
+    }
+  }, [exerciseId, variation, duration, repsPerMinute, load, startedAt, pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes])
+
+  const begin = () => {
+    const timestamp = Date.now()
+    setStartedAt(timestamp)
+    setPausedAt(null)
+    setPauseMs(0)
+    setMinutes([])
+    setActiveInputMinute(1)
+    setActualInput('')
+    setActualTouched(false)
+    setNow(timestamp)
   }
-  const complete = elapsedSeconds >= duration * 60
+
+  const pause = () => {
+    setPausedAt(Date.now())
+    setNow(Date.now())
+  }
+
+  const resume = () => {
+    if (pausedAt !== null) setPauseMs(value => value + Date.now() - pausedAt)
+    setPausedAt(null)
+    setNow(Date.now())
+  }
+
+  const recordMinute = (skipped = false) => {
+    if (startedAt === null) return
+    const minute = Math.min(duration, Math.max(1, currentMinute))
+    const actual = skipped ? 0 : Math.max(0, Number(actualInput) || 0)
+    setMinutes(previous => {
+      const byMinute = new Map(previous.map(item => [item.minute, item]))
+      // Se l'utente è rimasto indietro, non fingiamo che i minuti precedenti siano riusciti.
+      for (let missed = 1; missed < minute; missed += 1) {
+        if (!byMinute.has(missed)) byMinute.set(missed, { minute: missed, targetReps: repsPerMinute, actualReps: 0, skipped: true, completed: false })
+      }
+      byMinute.set(minute, {
+        minute, targetReps: repsPerMinute, actualReps: actual, skipped,
+        completed: !skipped && actual >= repsPerMinute,
+      })
+      return [...byMinute.values()].sort((a, b) => a.minute - b.minute)
+    })
+    setActualInput('')
+    setActualTouched(false)
+    setActiveInputMinute(minute < duration ? minute + 1 : duration)
+  }
+
+  const finish = async () => {
+    if (startedAt === null || saving) return
+    setSaving(true)
+    try {
+      const endTimestamp = Date.now()
+      const effectiveEnd = pausedAt ?? endTimestamp
+      const elapsedAtSave = Math.max(0, Math.floor((effectiveEnd - startedAt - pauseMs) / 1000))
+      const completedAtSave = Math.min(duration, Math.floor(elapsedAtSave / 60))
+      const byMinute = new Map(minutes.map(item => [item.minute, item]))
+      for (let minute = 1; minute <= completedAtSave; minute += 1) {
+        if (!byMinute.has(minute)) {
+          const hasInput = minute === activeInputMinute && actualTouched
+          const actual = hasInput ? Math.max(0, Number(actualInput) || 0) : 0
+          byMinute.set(minute, { minute, targetReps: repsPerMinute, actualReps: actual, skipped: !hasInput, completed: hasInput && actual >= repsPerMinute })
+        }
+      }
+      if (activeInputMinute > completedAtSave && actualTouched && !byMinute.has(activeInputMinute)) {
+        const actual = Math.max(0, Number(actualInput) || 0)
+        byMinute.set(activeInputMinute, {
+          minute: activeInputMinute, targetReps: repsPerMinute, actualReps: actual,
+          skipped: false, completed: actual >= repsPerMinute,
+        })
+      }
+      const finalMinutes = [...byMinute.values()].sort((a, b) => a.minute - b.minute)
+      const log: EmomLog = {
+        id: crypto.randomUUID(), exerciseId, variation, durationMinutes: duration,
+        repsPerMinute, addedLoadKg: load, minutes: finalMinutes, startedAt,
+        endedAt: endTimestamp, pausedAt: null, accumulatedPauseMs: pauseMs, rir,
+        technique, notes,
+      }
+      const workout = {
+        id: crypto.randomUUID(),
+        date: new Date(startedAt).toISOString().slice(0, 10),
+        dayLabel: 'Sessione EMOM',
+        kind: 'emom' as const,
+        title: (EXERCISES.find(e => e.id === exerciseId)?.name ?? 'EMOM') + ' · ' + duration + ' min',
+        setLogs: [],
+        emomLogs: [log],
+        fatigue: null,
+        sleepHours: null,
+        pain: technique === 'pain' ? 'Dolore segnalato durante EMOM' : '',
+        notes,
+        completedAt: endTimestamp,
+      }
+      await db.transaction('rw', db.emoms, db.workouts, async () => {
+        await db.emoms.add(log)
+        await db.workouts.add(workout)
+      })
+      window.localStorage.removeItem(DRAFT_KEY)
+      onClose()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const priorSameLoad = history.filter(log =>
+    log.startedAt < (startedAt ?? Date.now()) &&
+    log.exerciseId === exerciseId && log.variation === variation && log.addedLoadKg === load
+  ).sort((a, b) => b.startedAt - a.startedAt)
+  let cleanStreak = 0
+  for (const previous of priorSameLoad) {
+    if (!isClean(previous)) break
+    cleanStreak += 1
+  }
+  const preview: EmomLog = {
+    id: 'preview', exerciseId, variation, durationMinutes: duration, repsPerMinute,
+    addedLoadKg: load, minutes, startedAt: startedAt ?? Date.now(), endedAt: null,
+    pausedAt, accumulatedPauseMs: pauseMs, rir, technique, notes,
+  }
+  const suggestion = startedAt !== null && minutes.length > 0 ? suggestEmomProgression(preview, cleanStreak) : null
+  const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
+
   return <div className="modal-backdrop"><div className="modal emom-modal">
-    <div className="modal-head"><div><div className="eyebrow">SESSIONE STRUTTURATA</div><h2>EMOM runner</h2></div><button className="close-button" onClick={onClose}>×</button></div>
+    <div className="modal-head"><div><div className="eyebrow">SESSIONE STRUTTURATA</div><h2>EMOM runner</h2></div><button className="close-button" onClick={onClose} aria-label="Chiudi; sessione salvata automaticamente">×</button></div>
     {startedAt === null ? <>
-      <label>Esercizio<select value={exerciseId} onChange={e=>setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-      <label>Variante<input value={variation} onChange={e=>setVariation(e.target.value)}/></label>
-      <div className="form-grid"><label>Durata (min)<input type="number" min="1" max="60" value={duration} onChange={e=>setDuration(Math.max(1,Number(e.target.value)))}/></label><label>Reps / min<input type="number" min="1" value={repsPerMinute} onChange={e=>setRepsPerMinute(Math.max(1,Number(e.target.value)))}/></label></div>
-      <label>Zavorra<select value={load} onChange={e=>setLoad(Number(e.target.value))}>{[0,5,10,15,20,25,30].map(v=><option key={v} value={v}>{v} kg</option>)}</select></label>
+      {initialDraft && <p className="muted emom-resume-note">Configurazione precedente recuperata. Avvia per iniziare una nuova sessione.</p>}
+      <label>Esercizio<select value={exerciseId} onChange={e => setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+      <label>Variante<input value={variation} onChange={e => setVariation(e.target.value)} /></label>
+      <div className="form-grid"><label>Durata (min)<input type="number" min="1" max="60" value={duration} onChange={e => setDuration(Math.min(60, Math.max(1, Number(e.target.value) || 1)))} /></label><label>Reps / min<input type="number" min="1" max="100" value={repsPerMinute} onChange={e => setRepsPerMinute(Math.min(100, Math.max(1, Number(e.target.value) || 1)))} /></label></div>
+      <label>Zavorra<select value={load} onChange={e => setLoad(Number(e.target.value))}>{[0, 5, 10, 15, 20, 25, 30].map(v => <option key={v} value={v}>{v} kg</option>)}</select></label>
       <button className="primary-button full" onClick={begin}>INIZIA EMOM</button>
     </> : <>
-      <div className="emom-clock"><small>MINUTO {Math.min(currentMinute,duration)} / {duration}</small><strong>{clock}</strong><div className="progress-track"><span style={{width:`${progress}%`}}/></div><p>{repsPerMinute} ripetizioni · {load} kg</p></div>
-      <div className="minute-log"><div className="minute-log-head"><strong>Minuti registrati</strong><span>{minutes.length}/{duration}</span></div><div className="minute-dots">{Array.from({length:duration},(_,i)=>{const m=minutes.find(x=>x.minute===i+1);return <span key={i} className={m?(m.completed?'done':'missed'):''}>{i+1}</span>})}</div></div>
-      {!complete && <><label>Ripetizioni effettive nel minuto<input type="number" min="0" value={actual} onChange={e=>setActual(Math.max(0,Number(e.target.value)))}/></label><div className="form-grid"><button className="secondary-button" onClick={()=>recordMinute()}>REGISTRA MINUTO</button><button className="secondary-button" onClick={()=>recordMinute(true)}>SALTA MINUTO</button></div></>}
-      <div className="form-grid"><button className="secondary-button" onClick={running?pause:resume}>{running?'PAUSA':'RIPRENDI'}</button><button className="primary-button compact" onClick={()=>void finish()}>SALVA SESSIONE</button></div>
-      {complete && <p className="muted">Durata completata. Registra il riepilogo e salva la sessione.</p>}
-      <div className="form-grid"><label>RIR finale<input type="number" min="0" max="10" value={rir} onChange={e=>setRir(Number(e.target.value))}/></label><label>Tecnica<select value={technique} onChange={e=>setTechnique(e.target.value as EmomLog['technique'])}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label></div>
-      <label>Note<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Sensazioni, recupero..."/></label>
+      <div className="emom-clock">
+        <small>MINUTO {Math.min(currentMinute, duration)} / {duration}{complete ? ' · COMPLETATO' : ''}</small>
+        <strong>{totalClock}</strong>
+        <div className="progress-track"><span style={{ width: progress + '%' }} /></div>
+        <div className="emom-clock-meta"><span>Totale rimanente</span><strong>{totalClock}</strong><span>Finestra minuto</span><strong>{minuteClock}</strong></div>
+        <p>{repsPerMinute} ripetizioni · {load} kg · {formatClock(elapsedSeconds)} trascorsi</p>
+        {pausedAt !== null && <p className="emom-paused-label">Timer in pausa</p>}
+      </div>
+
+      <div className="minute-log">
+        <div className="minute-log-head"><strong>Ripetizioni per minuto</strong><span>{minutes.filter(m => !m.skipped).length}/{duration} registrati · {totalLoggedReps} reps</span></div>
+        <div className="minute-dots">{Array.from({ length: duration }, (_, i) => {
+          const item = minutes.find(m => m.minute === i + 1)
+          return <div key={i} className={'minute-result ' + (item ? item.skipped ? 'missed' : item.completed ? 'done' : 'partial')}>
+            <small>M{i + 1}</small><strong>{item ? item.actualReps : '—'}</strong><span>{item ? 'rep' : repsPerMinute + ' target'}</span>
+          </div>
+        })}</div>
+      </div>
+
+      <label>Ripetizioni effettive del minuto {Math.min(currentMinute, duration)}
+        <input type="number" min="0" max="500" value={actualInput} placeholder="Inserisci le reps fatte" onChange={e => { setActualInput(e.target.value); setActualTouched(true); setActiveInputMinute(currentMinute) }} />
+      </label>
+      <p className="muted emom-entry-hint">Puoi inserire le ripetizioni mentre il timer scorre. Alla fine del minuto la registrazione viene salvata automaticamente; puoi correggerla o registrarla subito con il pulsante qui sotto.</p>
+      <div className="form-grid">
+        <button className="secondary-button" onClick={() => recordMinute()} disabled={pausedAt !== null || complete}>REGISTRA MINUTO {currentMinute}</button>
+        <button className="secondary-button" onClick={() => recordMinute(true)} disabled={pausedAt !== null || complete}>SEGNA COME SALTATO</button>
+      </div>
+      <div className="form-grid">
+        <button className="secondary-button" onClick={running ? pause : resume} disabled={complete}>{running ? 'PAUSA TIMER' : 'RIPRENDI TIMER'}</button>
+        <button className="primary-button compact" onClick={() => void finish()} disabled={saving}>{saving ? 'SALVATAGGIO…' : complete ? 'SALVA SESSIONE' : 'TERMINA E SALVA'}</button>
+      </div>
+      {complete && <p className="muted">Tempo terminato. Controlla il riepilogo minuto per minuto, poi salva la sessione.</p>}
+      <div className="form-grid"><label>RIR finale<input type="number" min="0" max="10" value={rir} onChange={e => setRir(Math.min(10, Math.max(0, Number(e.target.value) || 0)))} /></label><label>Tecnica<select value={technique} onChange={e => setTechnique(e.target.value as EmomLog['technique'])}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label></div>
+      <label>Note<input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Sensazioni, recupero..." /></label>
+      {suggestion && <div className="progression-hint emom-progression"><strong>Prossima progressione: {suggestion.title}</strong><span>{suggestion.reason}</span></div>}
+      <p className="muted emom-resume-note">Sessione salvata automaticamente come bozza su questo dispositivo. Chiudendo la finestra potrai riprenderla dal punto in cui eri, con il tempo aggiornato.</p>
     </>}
   </div></div>
 }
