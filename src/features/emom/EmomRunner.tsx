@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Minus, Plus } from 'lucide-react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../database/db'
 import { EXERCISES } from '../../data/program'
@@ -79,7 +80,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
   const [now, setNow] = useState(Date.now())
   const [minutes, setMinutes] = useState<EmomLog['minutes']>(initialDraft?.minutes ?? [])
   const [activeInputMinute, setActiveInputMinute] = useState(initialDraft?.activeInputMinute ?? 1)
-  const [actualInput, setActualInput] = useState(initialDraft?.actualInput ?? '')
+  const [actualInput, setActualInput] = useState(initialDraft && initialDraft.actualInput !== '' ? initialDraft.actualInput : String(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? 6))
   const [actualTouched, setActualTouched] = useState(initialDraft?.actualTouched ?? false)
   const [rir, setRir] = useState(initialDraft?.rir ?? 2)
   const [technique, setTechnique] = useState<EmomLog['technique']>(initialDraft?.technique ?? 'good')
@@ -112,6 +113,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
     setDuration(saved.duration)
     setRepsPerMinute(saved.repsPerMinute)
     setLoad(saved.load)
+    setActualInput(String(saved.repsPerMinute))
   }, [exerciseId, variation, startedAt, initialDraft, progressionEnabled])
 
   // Chiude automaticamente i minuti scaduti. Se è stata digitata una prestazione,
@@ -123,7 +125,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
       const next = [...previous]
       for (let minute = 1; minute <= completedMinutes; minute += 1) {
         if (known.has(minute)) continue
-        const hasInput = minute === activeInputMinute && actualTouched
+        const hasInput = minute === activeInputMinute
         const actual = hasInput ? Math.max(0, Number(actualInput) || 0) : 0
         next.push({
           minute,
@@ -137,7 +139,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
       return next.sort((a, b) => a.minute - b.minute)
     })
     if (activeInputMinute <= completedMinutes) {
-      setActualInput('')
+      setActualInput(String(repsPerMinute))
       setActualTouched(false)
       setActiveInputMinute(Math.min(duration, completedMinutes + 1))
     }
@@ -169,7 +171,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
     setPauseMs(0)
     setMinutes([])
     setActiveInputMinute(1)
-    setActualInput('')
+    setActualInput(String(repsPerMinute))
     setActualTouched(false)
     setNow(timestamp)
   }
@@ -201,7 +203,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
       })
       return [...byMinute.values()].sort((a, b) => a.minute - b.minute)
     })
-    setActualInput('')
+    setActualInput(String(repsPerMinute))
     setActualTouched(false)
     setActiveInputMinute(minute < duration ? minute + 1 : duration)
   }
@@ -306,7 +308,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
       {initialDraft && startedAt === null && <p className="muted emom-resume-note">La bozza precedente non era stata avviata. Puoi iniziare con la configurazione qui sotto.</p>}
       <label>Esercizio<select value={exerciseId} onChange={e => setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
       <label>Variante<input value={variation} onChange={e => setVariation(e.target.value)} /></label>
-      <div className="form-grid"><label>Durata (min)<input type="number" min="1" max="60" value={duration} onChange={e => setDuration(Math.min(60, Math.max(1, Number(e.target.value) || 1)))} /></label><label>Reps / min<input type="number" min="1" max="100" value={repsPerMinute} onChange={e => setRepsPerMinute(Math.min(100, Math.max(1, Number(e.target.value) || 1)))} /></label></div>
+      <div className="form-grid"><label>Durata (min)<input type="number" min="1" max="60" value={duration} onChange={e => setDuration(Math.min(60, Math.max(1, Number(e.target.value) || 1)))} /></label><label>Reps / min<input type="number" min="1" max="100" value={repsPerMinute} onChange={e => { const value = Math.min(100, Math.max(1, Number(e.target.value) || 1)); setRepsPerMinute(value); setActualInput(String(value)) }} /></label></div>
       <label>Zavorra<select value={load} onChange={e => setLoad(Number(e.target.value))}>{[0, 5, 10, 15, 20, 25, 30].map(v => <option key={v} value={v}>{v} kg</option>)}</select></label>
       <button className="primary-button full" onClick={begin}>INIZIA EMOM</button>
     </> : <>
@@ -314,29 +316,43 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
         <small>MINUTO {Math.min(currentMinute, duration)} / {duration}{complete ? ' · COMPLETATO' : ''}</small>
         <strong>{minuteClock}</strong>
         <div className="progress-track"><span style={{ width: progress + '%' }} /></div>
-        <div className="emom-clock-meta"><span>Rimanente EMOM</span><strong>{totalClock}</strong><span>Target del minuto</span><strong>{repsPerMinute} reps</strong></div>
-        <p>{repsPerMinute} ripetizioni · {load} kg · {formatClock(elapsedSeconds)} trascorsi</p>
+        <div className="emom-clock-meta"><span>Tempo totale rimanente</span><strong>{totalClock}</strong><span>Target per minuto</span><strong>{repsPerMinute} reps</strong></div>
+        <p>{EXERCISES.find(item => item.id === exerciseId)?.name} · {load} kg · {formatClock(elapsedSeconds)} trascorsi</p>
         {pausedAt !== null && <p className="emom-paused-label">Timer in pausa</p>}
       </div>
 
+      <div className="emom-current-entry">
+        <div className="current-entry-title"><strong>Quante ripetizioni hai fatto?</strong><span>MINUTO {Math.min(currentMinute, duration)}</span></div>
+        <div className="emom-rep-stepper">
+          <button type="button" aria-label="Diminuisci una ripetizione" onClick={() => { setActualInput(String(Math.max(0, (Number(actualInput) || 0) - 1))); setActualTouched(true); setActiveInputMinute(currentMinute) }} disabled={complete || pausedAt !== null}><Minus size={19}/></button>
+          <input aria-label="Ripetizioni effettive del minuto" type="number" min="0" max="500" value={actualInput} onChange={e => { setActualInput(e.target.value); setActualTouched(true); setActiveInputMinute(currentMinute) }} disabled={complete || pausedAt !== null}/>
+          <button type="button" aria-label="Aumenta una ripetizione" onClick={() => { setActualInput(String(Math.min(500, (Number(actualInput) || 0) + 1))); setActualTouched(true); setActiveInputMinute(currentMinute) }} disabled={complete || pausedAt !== null}><Plus size={19}/></button>
+        </div>
+        <p className="muted emom-entry-hint">Il valore parte dal target ({repsPerMinute} reps) e si ripristina per il minuto successivo. Correggilo con − / + solo quando serve.</p>
+        <div className="form-grid">
+          <button className="primary-button compact" onClick={() => recordMinute()} disabled={pausedAt !== null || complete}>REGISTRA {currentMinute} · {actualInput || '0'} REPS</button>
+          <button className="secondary-button" onClick={() => recordMinute(true)} disabled={pausedAt !== null || complete}>SEGNA SALTATO</button>
+        </div>
+      </div>
+
+      <div className="emom-previous">
+        <div className="emom-previous-head"><div><strong>ULTIMA SESSIONE</strong><small>{priorSameLoad[0] ? new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'short' }).format(new Date(priorSameLoad[0].startedAt)) + ' · stessa variante e zavorra' : 'Confronto sulla stessa variante e zavorra'}</small></div>{priorSameLoad[0] && <b>{priorSameLoad[0].minutes.reduce((sum, item) => sum + item.actualReps, 0)} reps</b>}</div>
+        {priorSameLoad[0] ? <div className="emom-previous-minutes">{Array.from({ length: priorSameLoad[0].durationMinutes }, (_, i) => {
+          const item = priorSameLoad[0].minutes.find(minute => minute.minute === i + 1)
+          return <div className="emom-previous-minute" key={i}><small>M{i + 1}</small><strong>{item && !item.skipped ? item.actualReps : '—'}</strong></div>
+        })}</div> : <p className="emom-previous-empty">Non hai ancora una seduta registrata con questa variante e questo carico. Al termine, qui troverai le ripetizioni minuto per minuto.</p>}
+      </div>
+
       <div className="minute-log">
-        <div className="minute-log-head"><strong>Ripetizioni per minuto</strong><span>{minutes.filter(m => !m.skipped).length}/{duration} registrati · {totalLoggedReps} reps</span></div>
+        <div className="minute-log-head"><strong>Questa sessione</strong><span>{minutes.filter(m => !m.skipped).length}/{duration} registrati · {totalLoggedReps} reps</span></div>
         <div className="minute-dots">{Array.from({ length: duration }, (_, i) => {
           const item = minutes.find(m => m.minute === i + 1)
           return <div key={i} className={'minute-result ' + (item ? (item.skipped ? 'missed' : item.completed ? 'done' : 'partial') : '')}>
-            <small>M{i + 1}</small><strong>{item ? item.actualReps : '—'}</strong><span>{item ? 'rep' : repsPerMinute + ' target'}</span>
+            <small>M{i + 1}</small><strong>{item ? item.actualReps : '—'}</strong><span>{item ? 'effettive' : repsPerMinute + ' target'}</span>
           </div>
         })}</div>
       </div>
 
-      <label>Ripetizioni effettive del minuto {Math.min(currentMinute, duration)}
-        <input type="number" min="0" max="500" value={actualInput} placeholder="Inserisci le reps fatte" onChange={e => { setActualInput(e.target.value); setActualTouched(true); setActiveInputMinute(currentMinute) }} />
-      </label>
-      <p className="muted emom-entry-hint">Puoi inserire le ripetizioni mentre il timer scorre. Alla fine del minuto la registrazione viene salvata automaticamente; puoi correggerla o registrarla subito con il pulsante qui sotto.</p>
-      <div className="form-grid">
-        <button className="secondary-button" onClick={() => recordMinute()} disabled={pausedAt !== null}>REGISTRA MINUTO {currentMinute}</button>
-        <button className="secondary-button" onClick={() => recordMinute(true)} disabled={pausedAt !== null}>SEGNA COME SALTATO</button>
-      </div>
       <div className="form-grid">
         <button className="secondary-button" onClick={running ? pause : resume} disabled={complete}>{running ? 'PAUSA TIMER' : 'RIPRENDI TIMER'}</button>
         <button className="primary-button compact" onClick={() => void finish()} disabled={saving}>{saving ? 'SALVATAGGIO…' : complete ? 'SALVA SESSIONE' : 'TERMINA E SALVA'}</button>
