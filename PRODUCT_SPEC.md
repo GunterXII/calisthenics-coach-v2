@@ -5,13 +5,13 @@ Goals: 30 strict pull-ups, 64 dips, 100 push-ups, 15 consecutive muscle-ups.
 Available plates: 2 × 10 kg and 2 × 5 kg. Valid added-load combinations: 0, 5, 10, 15, 20, 25, 30 kg. Never infer bodyweight as added load.
 
 ## Weekly plan
-- Monday — Pull strength: pull-up EMOM 10×6 BW; weighted pull-ups 1×5 @25 kg + 2×6–8 @20 kg; optional drop set every other week; chin-ups 3×8–10 @10–15 kg.
-- Tuesday — Push hypertrophy: dips EMOM 10 min ×6–8 @5 kg; weighted dips 1×8–10 @25–30 kg + 2×10–12 @20 kg; optional drop set; superset weighted push-ups 12–15 @15–20 kg + diamond push-ups 8–10 BW, 3–4 rounds.
-- Wednesday — Rest.
-- Thursday — Muscle-up/power: 4 rounds of 1 muscle-up + 6–8 straight-bar dips; muscle-up EMOM 8×2 (3 only when crisp); explosive pull-ups 3–4×4–5 BW; push-up EMOM 10×10–12 @5 kg (reduce to 6–8 min if Friday recovery suffers).
-- Friday — Weighted hypertrophy: close-grip pull-ups 4×6–8 @20 kg; paused dips 3–4×8–10 @15–20 kg; weighted push-ups 3×12–15 @15–20 kg.
-- Saturday — Circuit: 3 muscle-ups, 8 pull-ups, 15 dips, 20 push-ups; 3–4 rounds, 3 min rest. Progress to 5 rounds only with clean reps.
-- Sunday — Rest.
+- Monday — Rest.
+- Tuesday — Pull strength: pull-up EMOM 10×6 BW; weighted pull-ups 1×5 @25 kg + 2×6–8 @20 kg; optional drop set every other week; chin-ups 3×8–10 @10–15 kg.
+- Wednesday — Push hypertrophy: dips EMOM 10 min ×6–8 @5 kg; weighted dips 1×8–10 @25–30 kg + 2×10–12 @20 kg; optional drop set; superset weighted push-ups 12–15 @15–20 kg + diamond push-ups 8–10 BW, 3–4 rounds.
+- Thursday — Rest.
+- Friday — Muscle-up/power: 4 rounds of 1 muscle-up + 6–8 straight-bar dips; muscle-up EMOM 8×2 (3 only when crisp); explosive pull-ups 3–4×4–5 BW; push-up EMOM 10×10–12 @5 kg (reduce to 6–8 min if Saturday recovery suffers).
+- Saturday — Weighted hypertrophy: close-grip pull-ups 4×6–8 @20 kg; paused dips 3–4×8–10 @15–20 kg; weighted push-ups 3×12–15 @15–20 kg.
+- Sunday — Circuit: 3 muscle-ups, 8 pull-ups, 15 dips, 20 push-ups; 3–4 rounds, 3 min rest. Progress to 5 rounds only with clean reps.
 
 Deload week 4: volume down 35–50%, load down 15–20%, no failure, drop sets or maximal circuit. Keep the deload editable and never suggest progression during it.
 Remove pike push-ups from main sessions. Australian pull-ups are optional accessories and do not gate workout completion.
