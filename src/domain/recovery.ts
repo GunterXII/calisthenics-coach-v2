@@ -32,19 +32,21 @@ export function getRecoveryAlerts(workouts: WorkoutLog[]): RecoveryAlert[] {
     })
   }
 
-  if (latest.sleepHours !== null && latest.sleepHours < 6) {
+  const latestSleepHours = ordered.find(workout => workout.sleepHours !== null)?.sleepHours ?? null
+  if (latestSleepHours !== null && latestSleepHours < 6) {
     alerts.push({
       id: 'sleep',
       title: 'Sonno ridotto',
-      detail: 'Hai registrato meno di 6 ore di sonno nell’ultima seduta: considera un allenamento più leggero e valuta come ti senti durante il riscaldamento.',
+      detail: 'Hai registrato meno di 6 ore di sonno nella rilevazione più recente: considera un allenamento più leggero e valuta come ti senti durante il riscaldamento.',
     })
   }
 
-  if (latest.fatigue !== null && latest.fatigue >= 8) {
+  const latestFatigue = ordered.find(workout => workout.fatigue !== null)?.fatigue ?? null
+  if (latestFatigue !== null && latestFatigue >= 8) {
     alerts.push({
       id: 'fatigue',
       title: 'Fatica percepita elevata',
-      detail: 'Hai registrato fatica 8/10 o superiore: valuta di ridurre temporaneamente il volume del 20–30% e non forzare le serie se la tecnica peggiora.',
+      detail: 'Hai registrato fatica 8/10 o superiore nella rilevazione più recente: valuta di ridurre temporaneamente il volume del 20–30% e non forzare le serie se la tecnica peggiora.',
     })
   }
 
