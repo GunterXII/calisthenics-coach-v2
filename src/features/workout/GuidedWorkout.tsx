@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Minus, Pause, Play, Plus, X } from 'lucide-react'
-import { EXERCISES, VALID_LOADS_KG, type Prescription } from '../../data/program'
+import { Check, Minus, Pause, Play, Plus, X } from 'lucide-react'
+import { EXERCISES, type Prescription } from '../../data/program'
 import type { EmomLog, SetLog, WorkoutLog } from '../../types'
 
 type Props = {
