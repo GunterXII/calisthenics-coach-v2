@@ -7,7 +7,9 @@ import WorkoutLogger from './features/workout/WorkoutLogger'
 import ProgressDashboard from './features/progress/ProgressDashboard'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
-import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek } from './data/program'
+import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek, type Prescription } from './data/program'
+import { getStrengthPlanOverride } from './domain/strengthPlanOverrides'
+import { getEmomPlanOverride } from './domain/emomPlanOverrides'
 import type { EmomLog, ExerciseId, SetLog, WorkoutLog } from './types'
 
 type Tab = 'today' | 'plan' | 'history' | 'progress'
@@ -17,6 +19,24 @@ const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
 ]
 function localDateKey(date = new Date()) {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
+function withSavedProgression(prescription: Prescription): Prescription {
+  if (prescription.durationMinutes !== undefined) {
+    const override = getEmomPlanOverride(prescription.exerciseId, prescription.variation)
+    return override ? {
+      ...prescription,
+      durationMinutes: override.duration,
+      repsPerMinute: override.repsPerMinute,
+      addedLoadKg: override.load,
+    } : prescription
+  }
+  const override = getStrengthPlanOverride(prescription.exerciseId, prescription.variation)
+  return override ? {
+    ...prescription,
+    reps: override.targetReps,
+    addedLoadKg: override.addedLoadKg,
+  } : prescription
 }
 
 export default function App() {
@@ -74,11 +94,11 @@ export default function App() {
         <div className="stats-grid"><Stat label="SESSIONI TOTALI" value={totalSessions.toString().padStart(2,'0')}/><Stat label="ULTIMI 7 GIORNI" value={weeklyCount.toString().padStart(2,'0')}/><Stat label="CICLO" value={String(cycleWeek).padStart(2, '0') + " / 04"}/></div>
         <RecoveryAdvisor workouts={workouts} />
         <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>{today.label} <span className="muted">/ {today.focus}</span></h2></div><span className="tag">SETTIMANA BASE</span></div>
-        {activeTodayPrescriptions.length ? <div className="exercise-list">{(cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions).map((p,i)=><article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{prescriptionSummary(p, cycleWeek)}</span>{p.notes && <small className="plan-notes">{prescriptionNotes(p, cycleWeek)}</small>}</div><span className="exercise-arrow">↗</span></article>)}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
+        {activeTodayPrescriptions.length ? <div className="exercise-list">{(cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions).map((p,i)=>{const effective=withSavedProgression(p);return <article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{prescriptionSummary(effective, cycleWeek)}</span>{p.notes && <small className="plan-notes">{prescriptionNotes(effective, cycleWeek)}</small>}</div><span className="exercise-arrow">↗</span></article>})}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
         <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button>{activeTodayPrescriptions.filter(p => p.durationMinutes !== undefined).map((p, i) => <button key={today.id + '-emom-' + i} className="secondary-button full" onClick={() => { const scaled = prescriptionForWeek(p, cycleWeek); setEmomPreset({ exerciseId: p.exerciseId, variation: p.variation, duration: scaled.durationMinutes ?? 10, repsPerMinute: scaled.repsPerMinute ?? 6, load: scaled.addedLoadKg }); setShowEmom(true) }}><Timer size={17}/> AVVIA {p.title.toUpperCase()}</button>)}
         <button className="secondary-button full" onClick={()=>{setEmomPreset(null);setShowEmom(true)}}><Timer size={17}/> AVVIA EMOM PERSONALIZZATO</button>
       </section>}
-      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{(cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).length ? (cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).map((p,i)=><div className="plan-line" key={i}><div className="plan-line-copy"><span>{p.title}{p.optional && <small className="optional-tag">OPZIONALE</small>}</span><p className="plan-notes">{prescriptionNotes(p,cycleWeek)}</p></div><small>{prescriptionSummary(p,cycleWeek)}</small></div>) : <small className="muted">Riposo</small>}</div>)}</section>}
+      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{(cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).length ? (cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).map((p,i)=>{const effective=withSavedProgression(p);return <div className="plan-line" key={i}><div className="plan-line-copy"><span>{p.title}{p.optional && <small className="optional-tag">OPZIONALE</small>}</span><p className="plan-notes">{prescriptionNotes(effective,cycleWeek)}</p></div><small>{prescriptionSummary(effective,cycleWeek)}</small></div>}) : <small className="muted">Riposo</small>}</div>)}</section>}
       {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>{setEditingOriginalDate(w.date);setEditing(structuredClone(w))}}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}<DataManagement workouts={workouts} onRestored={()=>{try{const value=Number(localStorage.getItem('calisthenics-coach-v2:cycle-week'));setCycleWeek([1,2,3,4].includes(value)?value as CycleWeek:1)}catch{setCycleWeek(1)}}}/></section>}
       {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><ProgressDashboard workouts={workouts}/></section>}
     </main>
