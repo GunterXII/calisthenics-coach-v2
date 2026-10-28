@@ -49,8 +49,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
     return () => window.clearInterval(id)
   }, [])
   useEffect(() => {
-    if (isEmom) setEmomStartedAt(Date.now())
-    else setEmomStartedAt(null)
+    setEmomStartedAt(null)
     setSetIndex(0)
   }, [current, isEmom])
   useEffect(() => {
@@ -70,6 +69,8 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
     ...x, sets: x.sets.map((s, j) => j !== setIndex ? s : { ...s, actual: Math.max(0, value) }),
   })))
   const markComplete = () => {
+    if (isEmom && emomStartedAt === null) return
+    if (currentSet?.completed) return
     setProgress(xs => xs.map((x, i) => i !== current ? x : ({
       ...x, sets: x.sets.map((s, j) => j !== setIndex ? s : { ...s, completed: true }),
     })))
@@ -132,6 +133,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
           <h1>{p?.title}</h1>
           <p>{EXERCISES.find(x => x.id === p?.exerciseId)?.name} · {p?.variation}</p>
           <div className="guided-load">{p?.addedLoadKg ? '+' + p.addedLoadKg + ' kg' : 'CORPO LIBERO'}</div>
+          {isEmom && (p?.addedLoadKg ?? 0) > 0 && <div className="guided-load-editor"><span>ZAVORRA DURANTE L’EMOM</span><div className="guided-stepper"><button onClick={() => setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: Math.max(0, (x.prescription.addedLoadKg ?? 0) - 5) } })))} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="number" min="0" step="0.5" value={p?.addedLoadKg ?? 0} onChange={e => { const value = Math.max(0, Number(e.target.value) || 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))) }}/><span>kg</span><button onClick={() => setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: (x.prescription.addedLoadKg ?? 0) + 5 } })))} aria-label="Aumenta zavorra"><Plus/></button></div></div>}
           <div className="guided-set-counter">{isEmom ? 'MINUTO' : 'SERIE'} <strong>{String(setIndex + 1).padStart(2, '0')}</strong><span>/ {String(item?.sets.length).padStart(2, '0')}</span></div>
           <div className="guided-target"><small>{isEmom ? 'TARGET DEL MINUTO' : 'RIPETIZIONI TARGET'}</small><strong>{currentSet?.target ?? 0}</strong><span>ripetizioni</span></div>
           <div className="guided-entry"><span>RIPETIZIONI EFFETTIVE</span><div className="guided-stepper">
@@ -141,10 +143,10 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
           </div></div>
           {p?.notes && <p className="guided-notes">{p.notes}</p>}
         </section>
-        {isEmom ? <section className="guided-rest"><div><small>TIMER EMOM · TEMPO RIMANENTE</small><strong>{clock(emomRemaining)}</strong></div><div className="guided-rest-actions"><span>MINUTO {setIndex + 1}/{p?.durationMinutes} · {clock(emomMinuteRemaining)}</span></div></section> : restEnd !== null || restPaused !== null ? <section className="guided-rest"><div><small>RECUPERO</small><strong>{clock(restLeft)}</strong></div><div className="guided-rest-actions"><button onClick={() => { if (restEnd !== null) { setRestPaused(Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))); setRestEnd(null) } else { setRestEnd(Date.now() + (restPaused ?? restSeconds) * 1000); setRestPaused(null) } }}>{restEnd !== null ? <Pause/> : <Play/>}</button><button onClick={() => { setRestEnd(null); setRestPaused(null) }}>SALTA</button></div></section> : <div className="guided-rest-select"><span>RECUPERO</span>{[90,120,180].map(s => <button key={s} className={restSeconds === s ? 'selected' : ''} onClick={() => setRestSeconds(s)}>{s/60} min</button>)}</div>}
+        {isEmom ? <>{emomStartedAt === null ? <section className="guided-rest guided-emom-start"><div><small>EMOM PRONTO</small><strong>{p?.durationMinutes}:00</strong><span>Il timer parte solo quando sei pronto.</span></div><button className="primary-button" onClick={() => setEmomStartedAt(Date.now())}><Play size={18}/> INIZIA EMOM</button></section> : <section className="guided-rest"><div><small>TIMER EMOM · TEMPO RIMANENTE</small><strong>{clock(emomRemaining)}</strong></div><div className="guided-rest-actions"><span>MINUTO {setIndex + 1}/{p?.durationMinutes} · {clock(emomMinuteRemaining)}</span></div></section>}</> : restEnd !== null || restPaused !== null ? <section className="guided-rest"><div><small>RECUPERO</small><strong>{clock(restLeft)}</strong></div><div className="guided-rest-actions"><button onClick={() => { if (restEnd !== null) { setRestPaused(Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))); setRestEnd(null) } else { setRestEnd(Date.now() + (restPaused ?? restSeconds) * 1000); setRestPaused(null) } }}>{restEnd !== null ? <Pause/> : <Play/>}</button><button onClick={() => { setRestEnd(null); setRestPaused(null) }}>SALTA</button></div></section> : <div className="guided-rest-select"><span>RECUPERO</span>{[90,120,180].map(s => <button key={s} className={restSeconds === s ? 'selected' : ''} onClick={() => setRestSeconds(s)}>{s/60} min</button>)}</div>}
         <div className="guided-actions">
           <button className="guided-skip" onClick={() => { if (setIndex < (item?.sets.length ?? 1)-1) setSetIndex(v => v+1); else if (current < progress.length-1) { setCurrent(v=>v+1); setSetIndex(0) } else setShowFinish(true) }}>SALTA {isEmom ? 'MINUTO' : 'SERIE'}</button>
-          <button className="primary-button" onClick={markComplete}><Check size={18}/> {setIndex === (item?.sets.length ?? 1)-1 ? 'COMPLETA ESERCIZIO' : 'COMPLETA ' + (isEmom ? 'MINUTO' : 'SERIE')}</button>
+          <button className="primary-button" disabled={(isEmom && emomStartedAt === null) || Boolean(currentSet?.completed)} onClick={markComplete}><Check size={18}/> {currentSet?.completed ? 'MINUTO REGISTRATO' : setIndex === (item?.sets.length ?? 1)-1 ? 'COMPLETA ESERCIZIO' : 'COMPLETA ' + (isEmom ? 'MINUTO' : 'SERIE')}</button>
         </div>
         <div className="guided-up-next"><span>PROSSIMO</span><strong>{setIndex < (item?.sets.length ?? 1)-1 ? p?.title + ' · ' + (isEmom ? 'minuto ' : 'serie ') + (setIndex + 2) : progress[current + 1]?.prescription.title ?? 'Fine allenamento'}</strong></div>
       </>}
