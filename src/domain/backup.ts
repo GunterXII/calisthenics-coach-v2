@@ -122,6 +122,7 @@ export async function restoreBackup(backup: CoachBackup): Promise<void> {
   replaceEmomPlanOverrides(backup.settings.emomPlanOverrides)
   try {
     localStorage.setItem('calisthenics-coach-v2:cycle-week', String(backup.settings.cycleWeek))
+    localStorage.removeItem('calisthenics-coach-v2:active-emom:v1')
   } catch {}
 }
 export function downloadText(filename: string, content: string, type: string): void {
