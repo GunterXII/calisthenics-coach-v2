@@ -39,6 +39,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   const [restPaused, setRestPaused] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [showFinish, setShowFinish] = useState(false)
+  const [loadDraft, setLoadDraft] = useState('')
   const item = progress[current]
   const p = item?.prescription
   const currentSet = item?.sets[setIndex]
@@ -52,6 +53,9 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
     setEmomStartedAt(null)
     setSetIndex(0)
   }, [current, isEmom])
+  useEffect(() => {
+    setLoadDraft(String(p?.addedLoadKg ?? 0))
+  }, [current, p?.addedLoadKg])
   useEffect(() => {
     if (restEnd === null) return
     if (now >= restEnd) { setRestEnd(null); setRestPaused(0) }
@@ -133,7 +137,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
           <h1>{p?.title}</h1>
           <p>{EXERCISES.find(x => x.id === p?.exerciseId)?.name} · {p?.variation}</p>
           <div className="guided-load">{p?.addedLoadKg ? '+' + p.addedLoadKg + ' kg' : 'CORPO LIBERO'}</div>
-          {isEmom && (p?.addedLoadKg ?? 0) > 0 && <div className="guided-load-editor"><span>ZAVORRA DURANTE L’EMOM</span><div className="guided-stepper"><button onClick={() => setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: Math.max(0, (x.prescription.addedLoadKg ?? 0) - 5) } })))} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="number" min="0" step="0.5" value={p?.addedLoadKg ?? 0} onChange={e => { const value = Math.max(0, Number(e.target.value) || 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))) }}/><span>kg</span><button onClick={() => setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: (x.prescription.addedLoadKg ?? 0) + 5 } })))} aria-label="Aumenta zavorra"><Plus/></button></div></div>}
+          {isEmom && <div className="guided-load-editor"><span>ZAVORRA DURANTE L’EMOM</span><div className="guided-stepper"><button type="button" onClick={() => { const value = Math.max(0, (p?.addedLoadKg ?? 0) - 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="text" inputMode="numeric" pattern="[0-9]*" value={loadDraft} onChange={e => setLoadDraft(e.target.value)} onBlur={() => { const parsed = Number(loadDraft); const value = Number.isFinite(parsed) ? Math.min(30, Math.max(0, Math.round(parsed / 5) * 5)) : (p?.addedLoadKg ?? 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}/><span>kg</span><button type="button" onClick={() => { const value = Math.min(30, (p?.addedLoadKg ?? 0) + 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Aumenta zavorra"><Plus/></button></div><small>Incrementi disponibili: 0, 5, 10, 15, 20, 25 o 30 kg.</small></div>}
           <div className="guided-set-counter">{isEmom ? 'MINUTO' : 'SERIE'} <strong>{String(setIndex + 1).padStart(2, '0')}</strong><span>/ {String(item?.sets.length).padStart(2, '0')}</span></div>
           <div className="guided-target"><small>{isEmom ? 'TARGET DEL MINUTO' : 'RIPETIZIONI TARGET'}</small><strong>{currentSet?.target ?? 0}</strong><span>ripetizioni</span></div>
           <div className="guided-entry"><span>RIPETIZIONI EFFETTIVE</span><div className="guided-stepper">
