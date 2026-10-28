@@ -1,5 +1,5 @@
-const CACHE = 'calisthenics-coach-v2-shell-v3'
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/coach-192.svg', '/icons/coach-512.svg']
+const CACHE = 'calisthenics-coach-v2-shell-v4'
+const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/coach-192.svg', '/icons/coach-192.png', '/icons/coach-512.svg']
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE)
