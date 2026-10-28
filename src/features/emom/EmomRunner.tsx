@@ -80,7 +80,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
   const [now, setNow] = useState(Date.now())
   const [minutes, setMinutes] = useState<EmomLog['minutes']>(initialDraft?.minutes ?? [])
   const [activeInputMinute, setActiveInputMinute] = useState(initialDraft?.activeInputMinute ?? 1)
-  const [actualInput, setActualInput] = useState(initialDraft && initialDraft.actualInput !== '' ? initialDraft.actualInput : String(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? 6))
+  const [actualInput, setActualInput] = useState(typeof initialDraft?.actualInput === 'string' && initialDraft.actualInput !== '' ? initialDraft.actualInput : String(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? 6))
   const [actualTouched, setActualTouched] = useState(initialDraft?.actualTouched ?? false)
   const [rir, setRir] = useState(initialDraft?.rir ?? 2)
   const [technique, setTechnique] = useState<EmomLog['technique']>(initialDraft?.technique ?? 'good')
@@ -109,12 +109,15 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
   useEffect(() => {
     if (startedAt !== null || initialDraft || !progressionEnabled) return
     const saved = getEmomPlanOverride(exerciseId, variation)
-    if (!saved) return
-    setDuration(saved.duration)
-    setRepsPerMinute(saved.repsPerMinute)
-    setLoad(saved.load)
-    setActualInput(String(saved.repsPerMinute))
-  }, [exerciseId, variation, startedAt, initialDraft, progressionEnabled])
+    if (saved) {
+      setDuration(saved.duration)
+      setRepsPerMinute(saved.repsPerMinute)
+      setLoad(saved.load)
+      setActualInput(String(saved.repsPerMinute))
+    } else {
+      setActualInput(String(repsPerMinute))
+    }
+  }, [exerciseId, variation, startedAt, initialDraft, progressionEnabled, repsPerMinute])
 
   // Chiude automaticamente i minuti scaduti. Se è stata digitata una prestazione,
   // la usa per il minuto corrente; i minuti non inseriti vengono marcati come saltati.
@@ -219,7 +222,7 @@ export default function EmomRunner({ onClose, initialConfig, progressionEnabled 
       const byMinute = new Map(minutes.map(item => [item.minute, item]))
       for (let minute = 1; minute <= completedAtSave; minute += 1) {
         if (!byMinute.has(minute)) {
-          const hasInput = minute === activeInputMinute && actualTouched
+          const hasInput = minute === activeInputMinute
           const actual = hasInput ? Math.max(0, Number(actualInput) || 0) : 0
           byMinute.set(minute, { minute, targetReps: repsPerMinute, actualReps: actual, skipped: !hasInput, completed: hasInput && actual >= repsPerMinute })
         }
