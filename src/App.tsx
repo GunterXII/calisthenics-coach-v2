@@ -6,6 +6,7 @@ import EmomRunner from './features/emom/EmomRunner'
 import WorkoutLogger from './features/workout/WorkoutLogger'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
+import PlanEditor from './features/plan/PlanEditor'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek, type Prescription } from './data/program'
 import { getStrengthPlanOverride } from './domain/strengthPlanOverrides'
 import { getEmomPlanOverride } from './domain/emomPlanOverrides'
@@ -34,6 +35,7 @@ function withSavedProgression(prescription: Prescription): Prescription {
   const override = getStrengthPlanOverride(prescription.exerciseId, prescription.variation)
   return override ? {
     ...prescription,
+    sets: override.sets ?? prescription.sets,
     reps: override.targetReps,
     addedLoadKg: override.addedLoadKg,
   } : prescription
@@ -42,6 +44,7 @@ function withSavedProgression(prescription: Prescription): Prescription {
 export default function App() {
   const today = TRAINING_WEEK[(new Date().getDay() + 6) % 7]
   const [tab, setTab] = useState<Tab>('today')
+  const [planRevision, setPlanRevision] = useState(0)
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
     try { const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week')); return [1, 2, 3, 4].includes(value) ? value as CycleWeek : 1 } catch { return 1 }
   })
@@ -57,7 +60,7 @@ export default function App() {
   const oldestIncludedDate = new Date(); oldestIncludedDate.setHours(12, 0, 0, 0); oldestIncludedDate.setDate(oldestIncludedDate.getDate() - 6)
   const oldestIncludedKey = localDateKey(oldestIncludedDate)
   const weeklyCount = useMemo(() => workouts.filter(w => w.date >= oldestIncludedKey && w.date <= todayKey).length, [workouts, oldestIncludedKey, todayKey])
-  const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek, today.id])
+  const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek, today.id, planRevision])
   const saveEdit = async () => {
     if (!editing) return
     const originalDate = editingOriginalDate ?? editing.date
@@ -86,7 +89,7 @@ export default function App() {
   }
   const deleteWorkout = async () => { if (!deleteId) return; const workout = await db.workouts.get(deleteId); await db.transaction('rw', db.workouts, db.emoms, async () => { if (workout) for (const emom of workout.emomLogs) await db.emoms.delete(emom.id); await db.workouts.delete(deleteId) }); setDeleteId(null) }
   return <div className="app-shell">
-    <header className="topbar"><div className="brand-mark">C<span>.</span></div><div className="brand-copy"><strong>CALISTHENICS COACH</strong><small>PERSONAL TRAINING SYSTEM</small></div><div className="topbar-status"><span className="status-dot" /> LOCAL</div></header>
+    <header className="topbar"><div className="brand-mark">C<span>.</span></div><div className="brand-copy"><strong>CALISTHENICS COACH</strong><small>PERSONAL TRAINING SYSTEM</small></div></header>
     <main className="main-content">
       {tab === 'today' && <section>
         <div className="eyebrow">{new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()).toUpperCase()}</div>
@@ -98,7 +101,7 @@ export default function App() {
         <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button>{activeTodayPrescriptions.filter(p => p.durationMinutes !== undefined).map((p, i) => <button key={today.id + '-emom-' + i} className="secondary-button full" onClick={() => { const scaled = prescriptionForWeek(withSavedProgression(p), cycleWeek); setEmomPreset({ exerciseId: p.exerciseId, variation: p.variation, duration: scaled.durationMinutes ?? 10, repsPerMinute: scaled.repsPerMinute ?? 6, load: scaled.addedLoadKg }); setShowEmom(true) }}><Timer size={17}/> AVVIA {p.title.toUpperCase()}</button>)}
         <button className="secondary-button full" onClick={()=>{setEmomPreset(null);setShowEmom(true)}}><Timer size={17}/> AVVIA EMOM PERSONALIZZATO</button>
       </section>}
-      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{(cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).length ? (cycleWeek===4?day.prescriptions.filter(p=>!p.optional):day.prescriptions).map((p,i)=>{const effective=withSavedProgression(p);return <div className="plan-line" key={i}><div className="plan-line-copy"><span>{p.title}{p.optional && <small className="optional-tag">OPZIONALE</small>}</span><p className="plan-notes">{prescriptionNotes(effective,cycleWeek)}</p></div><small>{prescriptionSummary(effective,cycleWeek)}</small></div>}) : <small className="muted">Riposo</small>}</div>)}</section>}
+      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day => <PlanEditor key={day.id} day={day} cycleWeek={cycleWeek} onSaved={() => setPlanRevision(value => value + 1)} />)}</section>}
       {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>{setEditingOriginalDate(w.date);setEditing(structuredClone(w))}}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}<DataManagement workouts={workouts} onRestored={()=>{try{const value=Number(localStorage.getItem('calisthenics-coach-v2:cycle-week'));setCycleWeek([1,2,3,4].includes(value)?value as CycleWeek:1)}catch{setCycleWeek(1)}}}/></section>}
       {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><Suspense fallback={<div className="empty-state">Caricamento delle analisi…</div>}><ProgressDashboard workouts={workouts}/></Suspense></section>}
     </main>
