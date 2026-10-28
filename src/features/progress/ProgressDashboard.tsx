@@ -44,11 +44,11 @@ export default function ProgressDashboard({ workouts }: { workouts: WorkoutLog[]
     const byDate = new Map<string, { date: string; reps: number; load: number }>()
     filtered.forEach(workout => workout.setLogs.filter(set => set.exerciseId === exercise && set.completed).forEach(set => {
       const previous = byDate.get(workout.date)
-      if (!previous || set.actualReps > previous.reps) {
-        byDate.set(workout.date, { date: workout.date, reps: set.actualReps, load: set.addedLoadKg })
-      } else if (set.addedLoadKg > previous.load) {
-        byDate.set(workout.date, { ...previous, load: set.addedLoadKg })
-      }
+      byDate.set(workout.date, {
+        date: workout.date,
+        reps: Math.max(previous?.reps ?? 0, set.actualReps),
+        load: Math.max(previous?.load ?? 0, set.addedLoadKg),
+      })
     }))
     return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).map(point => ({ ...point, date: point.date.slice(5) }))
   }, [filtered, exercise])
