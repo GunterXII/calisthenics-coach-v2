@@ -86,14 +86,20 @@ export const TRAINING_WEEK: TrainingDay[] = [
   { id: 'sun', label: 'Domenica', focus: 'Recupero', prescriptions: [] },
 ]
 
+export function prescriptionForWeek(p: Prescription, week: CycleWeek): Prescription {
+  if (week !== 4) return { ...p }
+  return {
+    ...p,
+    addedLoadKg: Math.max(0, p.addedLoadKg - (p.addedLoadKg > 0 ? 5 : 0)),
+    sets: p.sets === undefined ? undefined : Math.max(1, Math.ceil(p.sets * 0.6)),
+    durationMinutes: p.durationMinutes === undefined ? undefined : Math.max(1, Math.ceil(p.durationMinutes * 0.6)),
+  }
+}
+
 export function prescriptionSummary(p: Prescription, week: CycleWeek = 1) {
-  const load = week === 4
-    ? Math.max(0, p.addedLoadKg - (p.addedLoadKg >= 5 ? 5 : 0))
-    : p.addedLoadKg
-  const sets = p.sets === undefined ? undefined : week === 4 ? Math.max(1, Math.ceil(p.sets * 0.6)) : p.sets
-  const minutes = p.durationMinutes === undefined ? undefined : week === 4 ? Math.max(1, Math.ceil(p.durationMinutes * 0.6)) : p.durationMinutes
-  if (minutes !== undefined) return String(minutes) + ' min × ' + p.repsPerMinute + ' rep/min · ' + load + ' kg'
-  return String(sets) + ' serie × ' + p.reps + ' rep · ' + load + ' kg'
+  const scaled = prescriptionForWeek(p, week)
+  if (scaled.durationMinutes !== undefined) return String(scaled.durationMinutes) + ' min × ' + scaled.repsPerMinute + ' rep/min · ' + scaled.addedLoadKg + ' kg'
+  return String(scaled.sets) + ' serie × ' + scaled.reps + ' rep · ' + scaled.addedLoadKg + ' kg'
 }
 
 export function prescriptionNotes(p: Prescription, week: CycleWeek) {
