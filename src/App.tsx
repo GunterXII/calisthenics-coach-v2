@@ -1,8 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Timer, Pencil, Trash2, Play, Pause, Square, ChevronRight } from 'lucide-react'
+import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Pencil, Trash2, Play } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { db } from './database/db'
-import EmomRunner from './features/emom/EmomRunner'
 import GuidedWorkout from './features/workout/GuidedWorkout'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
@@ -29,13 +28,6 @@ function readActiveWorkoutTimer(): ActiveWorkoutTimer | null {
     if (Date.now() - value.startedAt > 18 * 60 * 60 * 1000 || value.startedAt > Date.now()) { localStorage.removeItem(ACTIVE_WORKOUT_KEY); return null }
     return value as ActiveWorkoutTimer
   } catch { return null }
-}
-function formatStopwatch(totalSeconds: number) {
-  const seconds = Math.max(0, Math.floor(totalSeconds))
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  return h > 0 ? [h, m, s].map(value => String(value).padStart(2, '0')).join(':') : [m, s].map(value => String(value).padStart(2, '0')).join(':')
 }
 function formatDuration(totalSeconds: number) {
   const seconds = Math.max(0, Math.floor(totalSeconds))
@@ -74,7 +66,6 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [planRevision, setPlanRevision] = useState(0)
   const [activeWorkoutTimer, setActiveWorkoutTimer] = useState<ActiveWorkoutTimer | null>(() => readActiveWorkoutTimer())
-  const [sessionClockNow, setSessionClockNow] = useState(Date.now())
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
     try { const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week')); return [1, 2, 3, 4].includes(value) ? value as CycleWeek : 1 } catch { return 1 }
   })
@@ -98,30 +89,12 @@ export default function App() {
     } catch {}
   }, [activeWorkoutTimer])
 
-  useEffect(() => {
-    if (!activeWorkoutTimer || activeWorkoutTimer.pausedAt !== null) return
-    const interval = window.setInterval(() => setSessionClockNow(Date.now()), 1000)
-    return () => window.clearInterval(interval)
-  }, [activeWorkoutTimer])
-
   const startWorkoutTimer = () => {
     if (activeWorkoutTimer) return
     const startedAt = Date.now()
     const next: ActiveWorkoutTimer = { id: crypto.randomUUID(), startedAt, pausedAt: null, pausedMs: 0 }
     try { localStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(next)) } catch {}
-    setSessionClockNow(startedAt)
     setActiveWorkoutTimer(next)
-  }
-
-  const toggleWorkoutPause = () => {
-    if (!activeWorkoutTimer) return
-    const timestamp = Date.now()
-    if (activeWorkoutTimer.pausedAt === null) {
-      setActiveWorkoutTimer({ ...activeWorkoutTimer, pausedAt: timestamp })
-    } else {
-      setActiveWorkoutTimer({ ...activeWorkoutTimer, pausedMs: activeWorkoutTimer.pausedMs + timestamp - activeWorkoutTimer.pausedAt, pausedAt: null })
-    }
-    setSessionClockNow(timestamp)
   }
 
   const finishWorkoutTimer = async () => {
@@ -144,13 +117,8 @@ export default function App() {
         workout.emomLogs.reduce((count, emom) => count + emom.minutes.reduce((minuteCount, minute) => minuteCount + minute.actualReps, 0), 0), 0),
     }
     await db.trainingSessions.put(session)
-    setSessionClockNow(endedAt)
     setActiveWorkoutTimer(null)
   }
-
-  const elapsedWorkoutSeconds = activeWorkoutTimer
-    ? Math.floor(Math.max(0, (activeWorkoutTimer.pausedAt ?? sessionClockNow) - activeWorkoutTimer.startedAt - activeWorkoutTimer.pausedMs) / 1000)
-    : 0
 
   const saveEdit = async () => {
     if (!editing) return
