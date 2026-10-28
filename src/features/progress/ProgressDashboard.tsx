@@ -73,7 +73,7 @@ export default function ProgressDashboard({ workouts }: { workouts: WorkoutLog[]
   }, [filtered, volumeFilter])
 
   const emomLogs = useMemo(() => filtered.flatMap(workout => workout.emomLogs).sort((a, b) => a.startedAt - b.startedAt), [filtered])
-  const availableVariations = useMemo(() => [...new Set(emomLogs.filter(log => log.exerciseId === emomExercise).map(log => log.variation))], [emomLogs, emomExercise])
+  const availableVariations = useMemo(() => [...new Set(workouts.flatMap(workout => workout.emomLogs).filter(log => log.exerciseId === emomExercise).map(log => log.variation))].sort((a, b) => a.localeCompare(b)), [workouts, emomExercise])
   const emomSeries = useMemo(() => emomLogs
     .filter(log => log.exerciseId === emomExercise)
     .filter(log => emomVariation === 'all' || log.variation === emomVariation)
