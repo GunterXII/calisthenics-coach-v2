@@ -47,6 +47,7 @@ function isExerciseId(value: unknown): value is ExerciseId {
 function isStrengthOverride(value: unknown): value is StrengthPlanOverride {
   return isObject(value) && isExerciseId(value.exerciseId) && typeof value.variation === 'string' &&
     Number.isFinite(value.targetReps) && Number(value.targetReps) >= 1 &&
+    (value.sets === undefined || (Number.isFinite(value.sets) && Number(value.sets) >= 1 && Number(value.sets) <= 20)) &&
     [0, 5, 10, 15, 20, 25, 30].includes(Number(value.addedLoadKg)) &&
     Number.isFinite(value.savedAt)
 }
