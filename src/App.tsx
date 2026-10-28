@@ -3,6 +3,7 @@ import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, T
 import { useMemo, useState } from 'react'
 import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
+import WorkoutLogger from './features/workout/WorkoutLogger'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
 
@@ -59,7 +60,7 @@ export default function App() {
     {showEmom && <EmomRunner onClose={()=>setShowEmom(false)}/>}
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>setEditing(null)} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showQuickLog && <div className="modal-backdrop" onClick={()=>setShowQuickLog(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><div className="eyebrow">NUOVA REGISTRAZIONE</div><h2>Log rapido</h2></div><button className="close-button" onClick={()=>setShowQuickLog(false)}>×</button></div><label>Esercizio<select value={exerciseId} onChange={e=>setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><div className="form-grid"><label>Ripetizioni<input type="number" min="0" value={reps} onChange={e=>setReps(Math.max(0,Number(e.target.value)))}/></label><label>Zavorra<select value={load} onChange={e=>setLoad(Number(e.target.value))}>{[0,5,10,15,20,25,30].map(v=><option key={v} value={v}>{v} kg</option>)}</select></label></div><label>Note<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Tecnica, sensazioni..."/></label><button className="primary-button full" onClick={()=>void addQuickLog()}>SALVA NELLO STORICO</button></div></div>}
+    {showQuickLog && <WorkoutLogger workouts={workouts} dayLabel={today.label} onClose={()=>setShowQuickLog(false)} onSave={async entry=>{await db.workouts.add(entry)}}/>}
   </div>
 }
 
