@@ -25,7 +25,7 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const workouts = useLiveQuery(() => db.workouts.orderBy('date').reverse().toArray(), []) ?? []
   const totalSessions = useLiveQuery(() => db.workouts.count(), []) ?? 0
-  const weeklyCount = useMemo(() => workouts.filter(w => Date.now() - new Date(w.date).getTime() < 7 * 86400000).length, [workouts])
+  const weeklyCount = useMemo(() => workouts.filter(w => { const age = Date.now() - new Date(w.date + 'T23:59:59').getTime(); return age >= 0 && age < 7 * 86400000 }).length, [workouts])
   const saveEdit = async () => { if (!editing) return; await db.workouts.put(editing); setEditing(null) }
   const deleteWorkout = async () => { if (!deleteId) return; const workout = await db.workouts.get(deleteId); await db.transaction('rw', db.workouts, db.emoms, async () => { if (workout) for (const emom of workout.emomLogs) await db.emoms.delete(emom.id); await db.workouts.delete(deleteId) }); setDeleteId(null) }
   return <div className="app-shell">
