@@ -34,6 +34,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   const [startedAt] = useState(Date.now())
   const [now, setNow] = useState(Date.now())
   const [restSeconds, setRestSeconds] = useState(180)
+  const [emomStartedAt, setEmomStartedAt] = useState<number | null>(null)
   const [restEnd, setRestEnd] = useState<number | null>(null)
   const [restPaused, setRestPaused] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
@@ -48,11 +49,20 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
     return () => window.clearInterval(id)
   }, [])
   useEffect(() => {
+    if (isEmom) setEmomStartedAt(Date.now())
+    else setEmomStartedAt(null)
+    setSetIndex(0)
+  }, [current, isEmom])
+  useEffect(() => {
     if (restEnd === null) return
     if (now >= restEnd) { setRestEnd(null); setRestPaused(0) }
   }, [now, restEnd])
   const elapsed = Math.floor((now - startedAt) / 1000)
   const restLeft = restEnd !== null ? Math.max(0, Math.ceil((restEnd - now) / 1000)) : restPaused ?? restSeconds
+  const emomDuration = (p?.durationMinutes ?? 0) * 60
+  const emomElapsed = emomStartedAt === null ? 0 : Math.max(0, Math.floor((now - emomStartedAt) / 1000))
+  const emomRemaining = Math.max(0, emomDuration - emomElapsed)
+  const emomMinuteRemaining = emomStartedAt === null ? 60 : emomRemaining === 0 ? 0 : 60 - (emomElapsed % 60)
   const updateActual = (delta: number) => setProgress(xs => xs.map((x, i) => i !== current ? x : ({
     ...x, sets: x.sets.map((s, j) => j !== setIndex ? s : { ...s, actual: Math.max(0, s.actual + delta) }),
   })))
@@ -64,8 +74,10 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
       ...x, sets: x.sets.map((s, j) => j !== setIndex ? s : { ...s, completed: true }),
     })))
     if (setIndex < (item?.sets.length ?? 1) - 1) {
-      setRestPaused(null)
-      setRestEnd(Date.now() + restSeconds * 1000)
+      if (!isEmom) {
+        setRestPaused(null)
+        setRestEnd(Date.now() + restSeconds * 1000)
+      }
       setSetIndex(value => value + 1)
     } else if (current < progress.length - 1) {
       setRestEnd(null); setRestPaused(null); setCurrent(value => value + 1); setSetIndex(0)
@@ -129,7 +141,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
           </div></div>
           {p?.notes && <p className="guided-notes">{p.notes}</p>}
         </section>
-        {restEnd !== null || restPaused !== null ? <section className="guided-rest"><div><small>RECUPERO</small><strong>{clock(restLeft)}</strong></div><div className="guided-rest-actions"><button onClick={() => { if (restEnd !== null) { setRestPaused(Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))); setRestEnd(null) } else { setRestEnd(Date.now() + (restPaused ?? restSeconds) * 1000); setRestPaused(null) } }}>{restEnd !== null ? <Pause/> : <Play/>}</button><button onClick={() => { setRestEnd(null); setRestPaused(null) }}>SALTA</button></div></section> : <div className="guided-rest-select"><span>RECUPERO</span>{[90,120,180].map(s => <button key={s} className={restSeconds === s ? 'selected' : ''} onClick={() => setRestSeconds(s)}>{s/60} min</button>)}</div>}
+        {isEmom ? <section className="guided-rest"><div><small>TIMER EMOM · TEMPO RIMANENTE</small><strong>{clock(emomRemaining)}</strong></div><div className="guided-rest-actions"><span>MINUTO {setIndex + 1}/{p?.durationMinutes} · {clock(emomMinuteRemaining)}</span></div></section> : restEnd !== null || restPaused !== null ? <section className="guided-rest"><div><small>RECUPERO</small><strong>{clock(restLeft)}</strong></div><div className="guided-rest-actions"><button onClick={() => { if (restEnd !== null) { setRestPaused(Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))); setRestEnd(null) } else { setRestEnd(Date.now() + (restPaused ?? restSeconds) * 1000); setRestPaused(null) } }}>{restEnd !== null ? <Pause/> : <Play/>}</button><button onClick={() => { setRestEnd(null); setRestPaused(null) }}>SALTA</button></div></section> : <div className="guided-rest-select"><span>RECUPERO</span>{[90,120,180].map(s => <button key={s} className={restSeconds === s ? 'selected' : ''} onClick={() => setRestSeconds(s)}>{s/60} min</button>)}</div>}
         <div className="guided-actions">
           <button className="guided-skip" onClick={() => { if (setIndex < (item?.sets.length ?? 1)-1) setSetIndex(v => v+1); else if (current < progress.length-1) { setCurrent(v=>v+1); setSetIndex(0) } else setShowFinish(true) }}>SALTA {isEmom ? 'MINUTO' : 'SERIE'}</button>
           <button className="primary-button" onClick={markComplete}><Check size={18}/> {setIndex === (item?.sets.length ?? 1)-1 ? 'COMPLETA ESERCIZIO' : 'COMPLETA ' + (isEmom ? 'MINUTO' : 'SERIE')}</button>
