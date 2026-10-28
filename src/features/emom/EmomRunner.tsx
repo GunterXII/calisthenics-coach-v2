@@ -244,7 +244,7 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
     addedLoadKg: load, minutes, startedAt: startedAt ?? Date.now(), endedAt: null,
     pausedAt, accumulatedPauseMs: pauseMs, rir, technique, notes,
   }
-  const suggestion = startedAt !== null && minutes.length > 0 ? suggestEmomProgression(preview, cleanStreak) : null
+  const suggestion = startedAt !== null && (complete || minutes.length >= duration) ? suggestEmomProgression(preview, cleanStreak) : null
   const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
 
   return <div className="modal-backdrop"><div className="modal emom-modal">
