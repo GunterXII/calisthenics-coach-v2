@@ -15,10 +15,12 @@ const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
   { id: 'today', label: 'Oggi', icon: Activity }, { id: 'plan', label: 'Scheda', icon: CalendarDays },
   { id: 'history', label: 'Storico', icon: History }, { id: 'progress', label: 'Progressi', icon: ChartNoAxesCombined },
 ]
-const dayIndex = (new Date().getDay() + 6) % 7
-const today = TRAINING_WEEK[dayIndex]
+function localDateKey(date = new Date()) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
 
 export default function App() {
+  const today = TRAINING_WEEK[(new Date().getDay() + 6) % 7]
   const [tab, setTab] = useState<Tab>('today')
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
     try { const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week')); return [1, 2, 3, 4].includes(value) ? value as CycleWeek : 1 } catch { return 1 }
@@ -31,8 +33,11 @@ export default function App() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const workouts = useLiveQuery(() => db.workouts.orderBy('date').reverse().toArray(), []) ?? []
   const totalSessions = useLiveQuery(() => db.workouts.count(), []) ?? 0
-  const weeklyCount = useMemo(() => workouts.filter(w => { const age = Date.now() - new Date(w.date + 'T23:59:59').getTime(); return age >= 0 && age < 7 * 86400000 }).length, [workouts])
-  const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek])
+  const todayKey = localDateKey()
+  const oldestIncludedDate = new Date(); oldestIncludedDate.setHours(12, 0, 0, 0); oldestIncludedDate.setDate(oldestIncludedDate.getDate() - 6)
+  const oldestIncludedKey = localDateKey(oldestIncludedDate)
+  const weeklyCount = useMemo(() => workouts.filter(w => w.date >= oldestIncludedKey && w.date <= todayKey).length, [workouts, oldestIncludedKey, todayKey])
+  const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek, today.id])
   const saveEdit = async () => {
     if (!editing) return
     const originalDate = editingOriginalDate ?? editing.date
