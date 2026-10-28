@@ -90,7 +90,7 @@ describe('EMOM progression rules', () => {
     const suggestion = suggestEmomProgression(emom(), 3)
     expect(suggestion.action).toBe('consider-load')
     expect(suggestion.nextLoadKg).toBe(5)
-    expect(suggestion.nextRepsPerMinute).toBe(2)
+    expect(suggestion.nextRepsPerMinute).toBe(4)
   })
 })
 
