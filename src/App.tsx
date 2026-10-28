@@ -3,9 +3,8 @@ import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, T
 import { useMemo, useState } from 'react'
 import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
-import { EXERCISES, TRAINING_WEEK } from './data/program'
+import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
-import { VALID_LOADS_KG } from './data/program'
 
 type Tab = 'today' | 'plan' | 'history' | 'progress'
 const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
@@ -63,4 +62,24 @@ export default function App() {
     {showQuickLog && <div className="modal-backdrop" onClick={()=>setShowQuickLog(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><div className="eyebrow">NUOVA REGISTRAZIONE</div><h2>Log rapido</h2></div><button className="close-button" onClick={()=>setShowQuickLog(false)}>×</button></div><label>Esercizio<select value={exerciseId} onChange={e=>setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><div className="form-grid"><label>Ripetizioni<input type="number" min="0" value={reps} onChange={e=>setReps(Math.max(0,Number(e.target.value)))}/></label><label>Zavorra<select value={load} onChange={e=>setLoad(Number(e.target.value))}>{[0,5,10,15,20,25,30].map(v=><option key={v} value={v}>{v} kg</option>)}</select></label></div><label>Note<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Tecnica, sensazioni..."/></label><button className="primary-button full" onClick={()=>void addQuickLog()}>SALVA NELLO STORICO</button></div></div>}
   </div>
 }
+
+function WorkoutEditor({workout,onChange,onClose,onSave}:{workout:WorkoutLog;onChange:(w:WorkoutLog)=>void;onClose:()=>void;onSave:()=>void}) {
+  const patch=(id:string,values:Partial<SetLog>)=>onChange({...workout,setLogs:workout.setLogs.map(s=>s.id===id?{...s,...values}:s)})
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal editor-modal" onClick={e=>e.stopPropagation()}>
+    <div className="modal-head"><div><div className="eyebrow">MODIFICA REGISTRAZIONE</div><h2>{workout.title}</h2></div><button className="close-button" onClick={onClose}>×</button></div>
+    <label>Titolo<input value={workout.title} onChange={e=>onChange({...workout,title:e.target.value})}/></label>
+    <label>Data<input type="date" value={workout.date} onChange={e=>onChange({...workout,date:e.target.value})}/></label>
+    <div className="editor-section-title">SERIE <button className="secondary-button" onClick={()=>onChange({...workout,setLogs:[...workout.setLogs,{id:crypto.randomUUID(),exerciseId:'pull-up',variation:'Strict',addedLoadKg:0,targetReps:6,actualReps:6,rir:2,completed:true,technique:'good',notes:'',createdAt:Date.now()}]})}>+ AGGIUNGI SERIE</button></div>
+    {workout.setLogs.map((s,i)=><div className="set-editor" key={s.id}><div className="plan-day-head"><strong>Serie {i+1}</strong><button className="icon-button danger" onClick={()=>onChange({...workout,setLogs:workout.setLogs.filter(x=>x.id!==s.id)})}><Trash2 size={15}/></button></div>
+      <label>Esercizio<select value={s.exerciseId} onChange={e=>patch(s.id,{exerciseId:e.target.value as ExerciseId})}>{EXERCISES.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+      <label>Variante<input value={s.variation} onChange={e=>patch(s.id,{variation:e.target.value})}/></label>
+      <div className="form-grid"><label>Target<input type="number" min="0" value={s.targetReps} onChange={e=>patch(s.id,{targetReps:Math.max(0,Number(e.target.value))})}/></label><label>Effettive<input type="number" min="0" value={s.actualReps} onChange={e=>patch(s.id,{actualReps:Math.max(0,Number(e.target.value))})}/></label></div>
+      <div className="form-grid"><label>Zavorra<select value={s.addedLoadKg} onChange={e=>patch(s.id,{addedLoadKg:Number(e.target.value)})}>{VALID_LOADS_KG.map(v=><option key={v} value={v}>{v} kg</option>)}</select></label><label>RIR<input type="number" min="0" max="10" value={s.rir ?? ''} onChange={e=>patch(s.id,{rir:e.target.value===''?null:Number(e.target.value)})}/></label></div>
+      <label>Tecnica<select value={s.technique} onChange={e=>patch(s.id,{technique:e.target.value as SetLog['technique']})}><option value="good">Buona</option><option value="degraded">Degradata</option><option value="pain">Dolore</option></select></label><label>Note<input value={s.notes} onChange={e=>patch(s.id,{notes:e.target.value})}/></label>
+    </div>)}
+    <label>Note sessione<input value={workout.notes} onChange={e=>onChange({...workout,notes:e.target.value})}/></label><label>Dolore / fastidi<input value={workout.pain} onChange={e=>onChange({...workout,pain:e.target.value})}/></label>
+    <button className="primary-button full" onClick={onSave}>SALVA MODIFICHE</button>
+  </div></div>
+}
+
 function Stat({label,value}:{label:string;value:string}) { return <div className="stat-card"><small>{label}</small><strong>{value}</strong></div> }
