@@ -45,12 +45,12 @@ export default function ProgressDashboard({ workouts }: { workouts: WorkoutLog[]
     filtered.forEach(workout => workout.setLogs.filter(set => set.exerciseId === exercise && set.completed).forEach(set => {
       const previous = byDate.get(workout.date)
       if (!previous || set.actualReps > previous.reps) {
-        byDate.set(workout.date, { date: workout.date.slice(5), reps: set.actualReps, load: set.addedLoadKg })
+        byDate.set(workout.date, { date: workout.date, reps: set.actualReps, load: set.addedLoadKg })
       } else if (set.addedLoadKg > previous.load) {
         byDate.set(workout.date, { ...previous, load: set.addedLoadKg })
       }
     }))
-    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)).map(point => ({ ...point, date: point.date.slice(5) }))
   }, [filtered, exercise])
 
   const weekly = useMemo(() => {
