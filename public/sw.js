@@ -1,4 +1,4 @@
-const CACHE = 'calisthenics-coach-v2-shell-v5'
+const CACHE = 'calisthenics-coach-v2-shell-v6'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/build-manifest.json', '/icons/coach-192.svg', '/icons/coach-192.png', '/icons/coach-512.svg']
 
 self.addEventListener('install', event => {
