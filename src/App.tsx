@@ -5,6 +5,7 @@ import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
 import WorkoutLogger from './features/workout/WorkoutLogger'
 import ProgressDashboard from './features/progress/ProgressDashboard'
+import DataManagement from './features/data/DataManagement'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
 
@@ -26,7 +27,7 @@ export default function App() {
   const totalSessions = useLiveQuery(() => db.workouts.count(), []) ?? 0
   const weeklyCount = useMemo(() => workouts.filter(w => Date.now() - new Date(w.date).getTime() < 7 * 86400000).length, [workouts])
   const saveEdit = async () => { if (!editing) return; await db.workouts.put(editing); setEditing(null) }
-  const deleteWorkout = async () => { if (!deleteId) return; await db.workouts.delete(deleteId); setDeleteId(null) }
+  const deleteWorkout = async () => { if (!deleteId) return; const workout = await db.workouts.get(deleteId); await db.transaction('rw', db.workouts, db.emoms, async () => { if (workout) for (const emom of workout.emomLogs) await db.emoms.delete(emom.id); await db.workouts.delete(deleteId) }); setDeleteId(null) }
   return <div className="app-shell">
     <header className="topbar"><div className="brand-mark">C<span>.</span></div><div className="brand-copy"><strong>CALISTHENICS COACH</strong><small>PERSONAL TRAINING SYSTEM</small></div><div className="topbar-status"><span className="status-dot" /> LOCAL</div></header>
     <main className="main-content">
@@ -39,7 +40,7 @@ export default function App() {
         <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button><button className="secondary-button full" onClick={()=>setShowEmom(true)}><Timer size={17}/> AVVIA EMOM PERSONALIZZATO</button>
       </section>}
       {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">Settimana tipo · 3 settimane di carico + 1 di deload.</p>{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{day.prescriptions.length ? day.prescriptions.map((p,i)=><div className="plan-line" key={i}><span>{p.title}</span><small>{p.durationMinutes ? `${p.durationMinutes}×${p.repsPerMinute}` : `${p.sets}×${p.reps}`} · {p.addedLoadKg} kg</small></div>) : <small className="muted">Riposo</small>}</div>)}</section>}
-      {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>setEditing(structuredClone(w))}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}</section>}
+      {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>setEditing(structuredClone(w))}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}<DataManagement workouts={workouts}/></section>}
       {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><ProgressDashboard workouts={workouts}/></section>}
     </main>
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
