@@ -3,7 +3,7 @@ import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Timer, 
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
-import WorkoutLogger from './features/workout/WorkoutLogger'
+import GuidedWorkout from './features/workout/GuidedWorkout'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
 import PlanEditor from './features/plan/PlanEditor'
@@ -78,9 +78,7 @@ export default function App() {
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
     try { const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week')); return [1, 2, 3, 4].includes(value) ? value as CycleWeek : 1 } catch { return 1 }
   })
-  const [showQuickLog, setShowQuickLog] = useState(false)
-  const [showEmom, setShowEmom] = useState(false)
-  const [emomPreset, setEmomPreset] = useState<{ exerciseId: ExerciseId; variation: string; duration: number; repsPerMinute: number; load: number } | null>(null)
+  const [showGuidedWorkout, setShowGuidedWorkout] = useState(false)
   const [editing, setEditing] = useState<WorkoutLog | null>(null)
   const [editingOriginalDate, setEditingOriginalDate] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -191,34 +189,10 @@ export default function App() {
         <RecoveryAdvisor workouts={workouts} />
         <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>{today.label} <span className="muted">/ {today.focus}</span></h2></div><span className="tag">{cycleWeek === 4 ? "DELOAD · SETTIMANA 4" : "CARICO · SETTIMANA " + cycleWeek}</span></div>
         {activeTodayPrescriptions.length ? <div className="exercise-list">{(cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions).map((p,i)=>{const effective=withSavedProgression(p);return <article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{prescriptionSummary(effective, cycleWeek)}</span>{p.notes && <small className="plan-notes">{prescriptionNotes(effective, cycleWeek)}</small>}</div><span className="exercise-arrow">↗</span></article>})}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
-        <section className="workout-session-panel">
-          {activeWorkoutTimer ? <div className="workout-session-live">
-            <div className="workout-session-heading"><div><span className="eyebrow">SESSIONE IN CORSO</span><p>{activeWorkoutTimer.pausedAt === null ? 'Il cronometro è attivo' : 'Cronometro in pausa'}</p></div><span className={activeWorkoutTimer.pausedAt === null ? 'session-status active' : 'session-status'}>{activeWorkoutTimer.pausedAt === null ? 'ATTIVA' : 'IN PAUSA'}</span></div>
-            <div className="workout-stopwatch"><Timer size={22}/><strong>{formatStopwatch(elapsedWorkoutSeconds)}</strong></div>
-            <div className="workout-session-controls">
-              <button className="secondary-button" type="button" onClick={toggleWorkoutPause}>{activeWorkoutTimer.pausedAt === null ? <Pause size={16}/> : <Play size={16}/>} {activeWorkoutTimer.pausedAt === null ? 'METTI IN PAUSA' : 'RIPRENDI'}</button>
-              <button className="finish-session-button" type="button" onClick={() => void finishWorkoutTimer()}><Square size={15}/> TERMINA E SALVA</button>
-            </div>
-          </div> : <div className="workout-session-start">
-            <div className="workout-session-heading"><div><span className="eyebrow">CRONOMETRO ALLENAMENTO</span><h3>Pronto a iniziare?</h3><p>Avvia il timer prima della prima serie. Il tempo continuerà anche mentre registri gli esercizi.</p></div></div>
-            <button className="primary-button workout-start-button" type="button" onClick={startWorkoutTimer}><Play size={18}/> INIZIA ALLENAMENTO</button>
-          </div>}
-          <div className="session-tools-heading"><span>STRUMENTI DELLA SESSIONE</span><small>Le registrazioni avviano il timer se non è già attivo</small></div>
-          <div className="session-tool-list">
-            <button className="session-tool" type="button" onClick={() => { startWorkoutTimer(); setShowQuickLog(true) }}>
-              <span className="session-tool-icon"><Dumbbell size={19}/></span><span className="session-tool-copy"><strong>Registra serie</strong><small>Ripetizioni, zavorra, RIR e tecnica</small></span><ChevronRight size={17} className="session-tool-arrow"/>
-            </button>
-            {activeTodayPrescriptions.filter(p => p.durationMinutes !== undefined).map((p, i) => {
-              const scaled = prescriptionForWeek(withSavedProgression(p), cycleWeek)
-              return <button className="session-tool" type="button" key={today.id + '-emom-' + i} onClick={() => { startWorkoutTimer(); setEmomPreset({ exerciseId: p.exerciseId, variation: p.variation, duration: scaled.durationMinutes ?? 10, repsPerMinute: scaled.repsPerMinute ?? 6, load: scaled.addedLoadKg }); setShowEmom(true) }}>
-                <span className="session-tool-icon"><Timer size={19}/></span><span className="session-tool-copy"><strong>EMOM programmato · {p.title.replace(/ EMOM.*/i, '').replace(/ EMOM/i, '')}</strong><small>{scaled.durationMinutes ?? 10} min × {scaled.repsPerMinute ?? 6} rep/min · {scaled.addedLoadKg} kg</small></span><ChevronRight size={17} className="session-tool-arrow"/>
-              </button>
-            })}
-            <button className="session-tool" type="button" onClick={() => { startWorkoutTimer(); setEmomPreset(null); setShowEmom(true) }}>
-              <span className="session-tool-icon"><Timer size={19}/></span><span className="session-tool-copy"><strong>EMOM personalizzato</strong><small>Scegli esercizio, durata, reps e zavorra</small></span><ChevronRight size={17} className="session-tool-arrow"/>
-            </button>
-          </div>
-          {!activeWorkoutTimer && trainingSessions[0] && <div className="last-session-summary"><div><span>ULTIMO ALLENAMENTO</span><small>{new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(trainingSessions[0].startedAt))} · {trainingSessions[0].loggedEntries} elementi registrati</small></div><strong>{formatDuration(trainingSessions[0].durationSeconds)}</strong></div>}
+        <section className="guided-launch-card">
+          <div><span className="eyebrow">LA TUA SESSIONE</span><h3>{activeTodayPrescriptions.length ? 'Pronto per iniziare?' : 'Giornata di recupero'}</h3><p>{activeTodayPrescriptions.length ? 'La scheda è pronta. Durante l’allenamento vedrai un esercizio alla volta, con serie, ripetizioni e recuperi.' : 'Oggi non sono previsti esercizi.'}</p></div>
+          {activeTodayPrescriptions.length > 0 && <button className="primary-button guided-launch-button" onClick={() => { startWorkoutTimer(); setShowGuidedWorkout(true) }}><Play size={18}/> INIZIA ALLENAMENTO</button>}
+          {!activeTodayPrescriptions.length && <span className="muted">RECUPERO PROGRAMMATO</span>}
         </section>
       </section>}
       {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day => <PlanEditor key={day.id} day={day} cycleWeek={cycleWeek} onSaved={() => setPlanRevision(value => value + 1)} />)}</section>}
@@ -226,10 +200,9 @@ export default function App() {
       {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><Suspense fallback={<div className="empty-state">Caricamento delle analisi…</div>}><ProgressDashboard workouts={workouts}/></Suspense></section>}
     </main>
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
-    {showEmom && <EmomRunner onClose={()=>{setShowEmom(false);setEmomPreset(null)}} initialConfig={emomPreset ?? undefined} progressionEnabled={cycleWeek !== 4}/>}
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>{setEditing(null);setEditingOriginalDate(null)}} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showQuickLog && <WorkoutLogger workouts={workouts} dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} progressionEnabled={cycleWeek !== 4} onClose={()=>setShowQuickLog(false)} onSave={async entry=>{await db.workouts.add(entry)}}/>}
+    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => { await db.workouts.add(entry); await finishWorkoutTimer(); setShowGuidedWorkout(false) }}/>}
   </div>
 }
 
