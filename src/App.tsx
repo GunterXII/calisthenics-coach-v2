@@ -21,26 +21,11 @@ export default function App() {
   const [showEmom, setShowEmom] = useState(false)
   const [editing, setEditing] = useState<WorkoutLog | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [exerciseId, setExerciseId] = useState<ExerciseId>('pull-up')
-  const [reps, setReps] = useState(1)
-  const [load, setLoad] = useState(0)
-  const [notes, setNotes] = useState('')
   const workouts = useLiveQuery(() => db.workouts.orderBy('date').reverse().toArray(), []) ?? []
   const totalSessions = useLiveQuery(() => db.workouts.count(), []) ?? 0
   const weeklyCount = useMemo(() => workouts.filter(w => Date.now() - new Date(w.date).getTime() < 7 * 86400000).length, [workouts])
   const saveEdit = async () => { if (!editing) return; await db.workouts.put(editing); setEditing(null) }
   const deleteWorkout = async () => { if (!deleteId) return; await db.workouts.delete(deleteId); setDeleteId(null) }
-  const addQuickLog = async () => {
-    const now = Date.now()
-    const entry: WorkoutLog = {
-      id: crypto.randomUUID(), date: new Date().toISOString().slice(0, 10), dayLabel: 'Sessione libera',
-      kind: 'strength', title: EXERCISES.find(e => e.id === exerciseId)?.name ?? 'Allenamento',
-      setLogs: [{ id: crypto.randomUUID(), exerciseId, variation: 'Strict', addedLoadKg: load, targetReps: reps, actualReps: reps, rir: null, completed: true, technique: 'good', notes: '', createdAt: now }],
-      emomLogs: [], fatigue: null, sleepHours: null, pain: '', notes, completedAt: now,
-    }
-    await db.workouts.add(entry)
-    setShowQuickLog(false); setNotes('')
-  }
   return <div className="app-shell">
     <header className="topbar"><div className="brand-mark">C<span>.</span></div><div className="brand-copy"><strong>CALISTHENICS COACH</strong><small>PERSONAL TRAINING SYSTEM</small></div><div className="topbar-status"><span className="status-dot" /> LOCAL</div></header>
     <main className="main-content">
