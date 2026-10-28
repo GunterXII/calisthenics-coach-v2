@@ -94,8 +94,8 @@ export function prescriptionForWeek(p: Prescription, week: CycleWeek): Prescript
   if (week !== 4) return { ...p }
   return {
     ...p,
-    addedLoadKg: Math.max(0, p.addedLoadKg - (p.addedLoadKg > 0 ? 5 : 0)),
-    sets: p.sets === undefined ? undefined : Math.max(1, p.sets === 2 ? 1 : Math.ceil(p.sets * 0.6)),
+    addedLoadKg: p.addedLoadKg >= 20 ? p.addedLoadKg - 5 : p.addedLoadKg,
+    sets: p.sets === undefined ? undefined : p.sets <= 1 ? 1 : p.sets === 2 ? 1 : p.sets === 3 ? 2 : Math.max(1, Math.floor(p.sets * 0.6)),
     durationMinutes: p.durationMinutes === undefined ? undefined : Math.max(1, Math.ceil(p.durationMinutes * 0.6)),
   }
 }
