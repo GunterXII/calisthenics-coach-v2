@@ -6,6 +6,7 @@ import { suggestStrengthProgression } from '../../domain/strengthProgression'
 import { getStrengthPlanOverride, saveStrengthPlanOverride } from '../../domain/strengthPlanOverrides'
 
 type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void>; prescriptions?: Prescription[] }
+type NextStrengthPlan = { targetReps: number; addedLoadKg: number }
 
 function previous(workouts: WorkoutLog[], id: ExerciseId) {
   for (const w of workouts) {
@@ -55,6 +56,7 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [suggestionModes, setSuggestionModes] = useState<Record<string, 'accepted' | 'kept' | 'editing' | 'custom'>>({})
+  const [progressionDrafts, setProgressionDrafts] = useState<Record<string, NextStrengthPlan>>({})
   const [restDuration, setRestDuration] = useState(180)
   const [restEndAt, setRestEndAt] = useState<number | null>(null)
   const [restPausedRemaining, setRestPausedRemaining] = useState<number | null>(null)
@@ -99,16 +101,29 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
   }
 
   const patch = (id: string, p: Partial<SetLog>) => setSets(xs => xs.map(s => s.id === id ? { ...s, ...p } : s))
-  const applySuggestion = (set: SetLog, mode: 'suggested' | 'custom') => {
-    const targetReps = mode === 'suggested'
-      ? (suggestStrengthProgression(workouts, set.exerciseId, set.variation)?.nextRepTarget ?? set.targetReps)
-      : set.targetReps
-    const suggested = suggestStrengthProgression(workouts, set.exerciseId, set.variation)
-    const addedLoadKg = mode === 'suggested' ? (suggested?.nextLoadKg ?? set.addedLoadKg) : set.addedLoadKg
-    const nextTarget = mode === 'suggested' ? targetReps : set.targetReps
-    saveStrengthPlanOverride({ exerciseId: set.exerciseId, variation: set.variation, targetReps: nextTarget, addedLoadKg, savedAt: Date.now() })
-    patch(set.id, { targetReps: nextTarget, actualReps: nextTarget, addedLoadKg })
-    setSuggestionModes(previous => ({ ...previous, [set.id]: mode === 'suggested' ? 'accepted' : 'custom' }))
+  const openProgressionEditor = (set: SetLog, suggestion: NonNullable<ReturnType<typeof suggestStrengthProgression>>) => {
+    setProgressionDrafts(previous => ({
+      ...previous,
+      [set.id]: previous[set.id] ?? {
+        targetReps: suggestion.nextRepTarget ?? set.targetReps,
+        addedLoadKg: suggestion.nextLoadKg ?? set.addedLoadKg,
+      },
+    }))
+    setSuggestionModes(previous => ({ ...previous, [set.id]: 'editing' }))
+  }
+  const updateProgressionDraft = (id: string, values: Partial<NextStrengthPlan>) => {
+    setProgressionDrafts(previous => ({ ...previous, [id]: { ...previous[id], ...values } }))
+  }
+  const saveProgressionChoice = (set: SetLog, suggestion: NonNullable<ReturnType<typeof suggestStrengthProgression>>, mode: 'suggested' | 'kept' | 'custom') => {
+    // Save only the NEXT-session plan. Never rewrite the set just performed or its recorded reps.
+    const next = mode === 'suggested'
+      ? { targetReps: suggestion.nextRepTarget ?? set.targetReps, addedLoadKg: suggestion.nextLoadKg ?? set.addedLoadKg }
+      : mode === 'custom'
+        ? (progressionDrafts[set.id] ?? { targetReps: suggestion.nextRepTarget ?? set.targetReps, addedLoadKg: suggestion.nextLoadKg ?? set.addedLoadKg })
+        : { targetReps: set.targetReps, addedLoadKg: set.addedLoadKg }
+    saveStrengthPlanOverride({ exerciseId: set.exerciseId, variation: set.variation, ...next, savedAt: Date.now() })
+    setProgressionDrafts(previous => ({ ...previous, [set.id]: next }))
+    setSuggestionModes(previous => ({ ...previous, [set.id]: mode === 'suggested' ? 'accepted' : mode === 'kept' ? 'kept' : 'custom' }))
   }
   const submit = async () => {
     if (!sets.length || saving) return
@@ -150,10 +165,13 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
         const suggestion = suggestStrengthProgression(workouts, s.exerciseId, s.variation)
         const mode = suggestionModes[s.id]
         if (!suggestion) return null
-        if (mode === 'accepted' || mode === 'custom') return <div className="progression-hint"><strong>Prossimo allenamento aggiornato</strong><span>Target e carico sono stati salvati per questa variante sul dispositivo.</span><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'editing' }))}>MODIFICA TARGET</button></div>
-        if (mode === 'kept') return <div className="progression-hint"><strong>Livello attuale mantenuto</strong><span>La proposta è stata ignorata; puoi comunque modificare target e carico sopra.</span><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: undefined as never }))}>RIVEDI PROPOSTA</button></div>
-        if (mode === 'editing') return <div className="progression-hint"><strong>Personalizza la prossima seduta</strong><span>Modifica target e carico nei campi sopra, poi salva questi valori come prossimo target.</span><button type="button" className="secondary-button" onClick={() => applySuggestion(s, 'custom')}>SALVA VALORI MODIFICATI</button></div>
-        return <div className="progression-hint"><strong>{suggestion.title}</strong><span>{suggestion.detail}</span><div className="form-grid"><button type="button" className="secondary-button" onClick={() => applySuggestion(s, 'suggested')}>ACCETTA</button><button type="button" className="secondary-button" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'kept' }))}>MANTIENI</button></div><button type="button" className="text-action" onClick={() => setSuggestionModes(previous => ({ ...previous, [s.id]: 'editing' }))}>MODIFICA PROPOSTA</button></div>
+        if (mode === 'accepted' || mode === 'custom') return <div className="progression-hint"><strong>Prossima seduta aggiornata</strong><span>Il piano per la prossima seduta è stato salvato. Le ripetizioni di questa serie non sono state modificate.</span><button type="button" className="text-action" onClick={() => openProgressionEditor(s, suggestion)}>MODIFICA PROSSIMO TARGET</button></div>
+        if (mode === 'kept') return <div className="progression-hint"><strong>Livello attuale mantenuto</strong><span>Il target attuale è stato salvato per la prossima seduta.</span><button type="button" className="text-action" onClick={() => openProgressionEditor(s, suggestion)}>MODIFICA PROSSIMO TARGET</button></div>
+        if (mode === 'editing') {
+          const draft = progressionDrafts[s.id] ?? { targetReps: suggestion.nextRepTarget ?? s.targetReps, addedLoadKg: suggestion.nextLoadKg ?? s.addedLoadKg }
+          return <div className="progression-hint"><strong>Personalizza la prossima seduta</strong><div className="form-grid"><label>Prossime ripetizioni<input type="number" min="1" max="100" value={draft.targetReps} onChange={event => updateProgressionDraft(s.id, { targetReps: Math.max(1, Number(event.target.value) || 1) })}/></label><label>Prossima zavorra<select value={draft.addedLoadKg} onChange={event => updateProgressionDraft(s.id, { addedLoadKg: Number(event.target.value) })}>{VALID_LOADS_KG.map(value => <option key={value} value={value}>{value} kg</option>)}</select></label></div><button type="button" className="secondary-button" onClick={() => saveProgressionChoice(s, suggestion, 'custom')}>SALVA PROSSIMO TARGET</button></div>
+        }
+        return <div className="progression-hint"><strong>{suggestion.title}</strong><span>{suggestion.detail}</span><div className="form-grid"><button type="button" className="secondary-button" onClick={() => saveProgressionChoice(s, suggestion, 'suggested')}>ACCETTA</button><button type="button" className="secondary-button" onClick={() => saveProgressionChoice(s, suggestion, 'kept')}>MANTIENI</button></div><button type="button" className="text-action" onClick={() => openProgressionEditor(s, suggestion)}>MODIFICA PROPOSTA</button></div>
       })()}<button type="button" className="rest-after-set" onClick={startRest}><Timer size={14}/> FINE SERIE · AVVIA RECUPERO {formatRest(restDuration)}</button></article>)}
     <div className="add-set-row"><select value={selected} onChange={e => setSelected(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary-button" onClick={() => setSets(xs => [...xs, makeSet(selected, previous(workouts, selected))])}><Plus size={15} /> AGGIUNGI SERIE</button></div>
     <div className="logger-section-head"><strong>RECUPERO E FEEDBACK</strong></div><div className="form-grid"><label>Fatica (1–10)<input type="number" min="1" max="10" value={fatigue ?? ''} onChange={e => setFatigue(e.target.value === '' ? null : Number(e.target.value))} /></label><label>Ore di sonno<input type="number" min="0" max="24" step=".5" value={sleepHours ?? ''} onChange={e => setSleepHours(e.target.value === '' ? null : Number(e.target.value))} /></label></div>
