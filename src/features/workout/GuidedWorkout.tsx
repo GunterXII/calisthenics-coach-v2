@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Minus, Pause, Play, Plus, X } from 'lucide-react'
 import { EXERCISES, type Prescription } from '../../data/program'
 import type { EmomLog, SetLog, WorkoutLog } from '../../types'
@@ -40,6 +40,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   const [saving, setSaving] = useState(false)
   const [showFinish, setShowFinish] = useState(false)
   const [loadDraft, setLoadDraft] = useState('')
+  const completionLock = useRef(false)
   const item = progress[current]
   const p = item?.prescription
   const currentSet = item?.sets[setIndex]
@@ -55,7 +56,8 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   }, [current, isEmom])
   useEffect(() => {
     setLoadDraft(String(p?.addedLoadKg ?? 0))
-  }, [current, p?.addedLoadKg])
+    completionLock.current = false
+  }, [current, setIndex, p?.addedLoadKg])
   useEffect(() => {
     if (restEnd === null) return
     if (now >= restEnd) { setRestEnd(null); setRestPaused(0) }
@@ -74,7 +76,8 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   })))
   const markComplete = () => {
     if (isEmom && emomStartedAt === null) return
-    if (currentSet?.completed) return
+    if (currentSet?.completed || completionLock.current) return
+    completionLock.current = true
     setProgress(xs => xs.map((x, i) => i !== current ? x : ({
       ...x, sets: x.sets.map((s, j) => j !== setIndex ? s : { ...s, completed: true }),
     })))
@@ -136,8 +139,8 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
         <section className="guided-exercise">
           <h1>{p?.title}</h1>
           <p>{EXERCISES.find(x => x.id === p?.exerciseId)?.name} · {p?.variation}</p>
-          <div className="guided-load">{p?.addedLoadKg ? '+' + p.addedLoadKg + ' kg' : 'CORPO LIBERO'}</div>
-          {isEmom && <div className="guided-load-editor"><span>ZAVORRA DURANTE L’EMOM</span><div className="guided-stepper"><button type="button" onClick={() => { const value = Math.max(0, (p?.addedLoadKg ?? 0) - 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="text" inputMode="numeric" pattern="[0-9]*" value={loadDraft} onChange={e => setLoadDraft(e.target.value)} onBlur={() => { const parsed = Number(loadDraft); const value = Number.isFinite(parsed) ? Math.min(30, Math.max(0, Math.round(parsed / 5) * 5)) : (p?.addedLoadKg ?? 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}/><span>kg</span><button type="button" onClick={() => { const value = Math.min(30, (p?.addedLoadKg ?? 0) + 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Aumenta zavorra"><Plus/></button></div><small>Incrementi disponibili: 0, 5, 10, 15, 20, 25 o 30 kg.</small></div>}
+          <div className="guided-load">{(p?.addedLoadKg ?? 0) > 0 ? '+' + p?.addedLoadKg + ' kg' : 'CORPO LIBERO'}</div>
+          <div className="guided-load-editor"><span>ZAVORRA {isEmom ? 'DURANTE L’EMOM' : 'ESERCIZIO'}</span><div className="guided-stepper"><button type="button" onClick={() => { const value = Math.max(0, (p?.addedLoadKg ?? 0) - 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="text" inputMode="numeric" pattern="[0-9]*" value={loadDraft} onChange={e => setLoadDraft(e.target.value)} onBlur={() => { const parsed = loadDraft.trim() === '' ? (p?.addedLoadKg ?? 0) : Number(loadDraft); const value = Number.isFinite(parsed) ? Math.min(30, Math.max(0, Math.round(parsed / 5) * 5)) : (p?.addedLoadKg ?? 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}/><span>kg</span><button type="button" onClick={() => { const value = Math.min(30, (p?.addedLoadKg ?? 0) + 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Aumenta zavorra"><Plus/></button></div><small>Incrementi disponibili: 0, 5, 10, 15, 20, 25 o 30 kg.</small></div>
           <div className="guided-set-counter">{isEmom ? 'MINUTO' : 'SERIE'} <strong>{String(setIndex + 1).padStart(2, '0')}</strong><span>/ {String(item?.sets.length).padStart(2, '0')}</span></div>
           <div className="guided-target"><small>{isEmom ? 'TARGET DEL MINUTO' : 'RIPETIZIONI TARGET'}</small><strong>{currentSet?.target ?? 0}</strong><span>ripetizioni</span></div>
           <div className="guided-entry"><span>RIPETIZIONI EFFETTIVE</span><div className="guided-stepper">
