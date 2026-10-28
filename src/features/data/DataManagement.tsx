@@ -3,7 +3,7 @@ import { Download, FileUp, FileSpreadsheet, ShieldCheck } from 'lucide-react'
 import { createBackup, downloadText, parseBackup, restoreBackup, workoutRowsCsv } from '../../domain/backup'
 import type { WorkoutLog } from '../../types'
 
-export default function DataManagement({ workouts }: { workouts: WorkoutLog[] }) {
+export default function DataManagement({ workouts, onRestored }: { workouts: WorkoutLog[]; onRestored?: () => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [busy,setBusy] = useState(false)
   const [message,setMessage] = useState('')
@@ -33,6 +33,7 @@ export default function DataManagement({ workouts }: { workouts: WorkoutLog[] })
       if (!confirmed) return
       await restoreBackup(parsed)
       setMessage('Ripristino completato. I dati sono stati sostituiti dal backup.')
+      onRestored?.()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'File non valido: ripristino annullato.')
     } finally {
