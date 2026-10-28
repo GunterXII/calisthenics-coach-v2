@@ -25,6 +25,9 @@ interface EmomDraft {
   rir: number
   technique: EmomLog['technique']
   notes: string
+  progressionChoice?: 'accepted' | 'kept' | 'editing' | 'custom' | null
+  nextPlanReps?: number
+  nextPlanLoad?: number
 }
 
 function readDraft(): EmomDraft | null {
@@ -67,9 +70,9 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
   const [duration, setDuration] = useState(initialDraft?.duration ?? initialPlanOverride?.duration ?? initialConfig?.duration ?? 10)
   const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? initialConfig?.repsPerMinute ?? 6)
   const [load, setLoad] = useState(initialDraft?.load ?? initialPlanOverride?.load ?? initialConfig?.load ?? 0)
-  const [progressionChoice, setProgressionChoice] = useState<'accepted' | 'kept' | 'editing' | 'custom' | null>(null)
-  const [nextPlanReps, setNextPlanReps] = useState(repsPerMinute)
-  const [nextPlanLoad, setNextPlanLoad] = useState(load)
+  const [progressionChoice, setProgressionChoice] = useState<'accepted' | 'kept' | 'editing' | 'custom' | null>(initialDraft?.progressionChoice ?? null)
+  const [nextPlanReps, setNextPlanReps] = useState(initialDraft?.nextPlanReps ?? repsPerMinute)
+  const [nextPlanLoad, setNextPlanLoad] = useState(initialDraft?.nextPlanLoad ?? load)
   const [startedAt, setStartedAt] = useState<number | null>(initialDraft?.startedAt ?? null)
   const [pausedAt, setPausedAt] = useState<number | null>(initialDraft?.pausedAt ?? null)
   const [pauseMs, setPauseMs] = useState(initialDraft?.pauseMs ?? 0)
@@ -150,13 +153,14 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
     const draft: EmomDraft = {
       version: 1, exerciseId, variation, duration, repsPerMinute, load, startedAt,
       pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes,
+      progressionChoice, nextPlanReps, nextPlanLoad,
     }
     try {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
     } catch {
       // Il timer continua a funzionare anche se lo storage non è disponibile.
     }
-  }, [exerciseId, variation, duration, repsPerMinute, load, startedAt, pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes])
+  }, [exerciseId, variation, duration, repsPerMinute, load, startedAt, pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes, progressionChoice, nextPlanReps, nextPlanLoad])
 
   const begin = () => {
     const timestamp = Date.now()
@@ -250,6 +254,15 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
         await db.emoms.add(log)
         await db.workouts.add(workout)
       })
+      if (progressionChoice && suggestion) {
+        const nextReps = progressionChoice === 'accepted'
+          ? (suggestion.nextRepsPerMinute ?? repsPerMinute)
+          : progressionChoice === 'kept' ? repsPerMinute : nextPlanReps
+        const nextLoad = progressionChoice === 'accepted'
+          ? (suggestion.nextLoadKg ?? load)
+          : progressionChoice === 'kept' ? load : nextPlanLoad
+        saveEmomPlanOverride({ exerciseId, variation, duration, repsPerMinute: nextReps, load: nextLoad, savedAt: Date.now() })
+      }
       window.localStorage.removeItem(DRAFT_KEY)
       onClose()
     } finally {
@@ -275,9 +288,14 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
   const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
   const saveNextPlan = (mode: 'accepted' | 'kept' | 'custom') => {
     if (!suggestion) return
-    const nextReps = mode === 'accepted' ? (suggestion.nextRepsPerMinute ?? repsPerMinute) : mode === 'custom' ? nextPlanReps : repsPerMinute
-    const nextLoad = mode === 'accepted' ? (suggestion.nextLoadKg ?? load) : mode === 'custom' ? nextPlanLoad : load
-    saveEmomPlanOverride({ exerciseId, variation, duration, repsPerMinute: nextReps, load: nextLoad, savedAt: Date.now() })
+    if (mode === 'accepted') {
+      setNextPlanReps(suggestion.nextRepsPerMinute ?? repsPerMinute)
+      setNextPlanLoad(suggestion.nextLoadKg ?? load)
+    } else if (mode === 'kept') {
+      setNextPlanReps(repsPerMinute)
+      setNextPlanLoad(load)
+    }
+    // The choice remains a draft until the workout itself is saved.
     setProgressionChoice(mode)
   }
 
