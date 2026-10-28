@@ -52,7 +52,7 @@ export const TRAINING_WEEK: TrainingDay[] = [
   {
       id: 'wed', label: 'Mercoledì', focus: 'Spinta e ipertrofia',
       prescriptions: [
-        { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 6, addedLoadKg: 5, variation: 'Parallele', notes: '10 minuti ×6–8 rep/min @5 kg. Se il venerdì peggiora, riduci la durata o le reps.' },
+        { exerciseId: 'dip', title: 'Dip zavorrati · volume', sets: 10, reps: 6, addedLoadKg: 5, variation: 'Parallele', notes: '10 serie ×6–8 ripetizioni @5 kg. Recupera 3 minuti tra ogni serie; aumenta le ripetizioni solo mantenendo tecnica e margine.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 8, addedLoadKg: 25, variation: 'Parallele · top set', notes: '1×8–10 @25–30 kg.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 2, reps: 10, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '2×10–12 @20 kg.' },
         { exerciseId: 'dip', title: 'Drop set dip', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane, solo se spalle e gomiti sono senza fastidi.' },
