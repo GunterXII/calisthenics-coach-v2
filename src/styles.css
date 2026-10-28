@@ -98,3 +98,10 @@
 .activity-legend i.level-2{background:#88b000}
 .activity-legend i.level-3{background:#b7f500}
 @media(max-width:380px){.emom-filter-grid{grid-template-columns:1fr}.cycle-selector button strong{font-size:19px}.plan-line{gap:8px}.plan-line>small{font-size:8px}}
+
+.rest-after-set{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;border:1px solid #3b4b12;border-radius:9px;background:#171e08;color:#b7f500;font-size:8px;font-weight:800;letter-spacing:.8px;cursor:pointer}
+.emom-edit-minutes{display:grid;gap:8px}
+.emom-edit-minute{display:grid;gap:8px;padding:10px;background:#171717;border:1px solid #303030;border-radius:9px}
+.emom-edit-minute>strong{font-size:10px;color:#b7f500}
+.emom-edit-minute>small{font-size:9px}
+.emom-editor .logger-set-head>span{font-size:10px;color:#b7f500}
