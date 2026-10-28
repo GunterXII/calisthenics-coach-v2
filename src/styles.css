@@ -14,3 +14,40 @@
 .progress-dashboard{display:grid;gap:16px;margin-top:20px}.progress-target-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.target-card{background:#151515;border:1px solid #292929;border-radius:12px;padding:13px;min-width:0}.target-card small{display:block;color:#888;font-size:8px;letter-spacing:1px}.target-card strong{display:block;font-size:25px;letter-spacing:-1px;margin:8px 0}.target-card strong i{font-size:12px;font-style:normal;color:#777;letter-spacing:0}.target-card em{display:block;font-size:9px;color:#888;font-style:normal;margin-top:7px}.target-track{height:4px;background:#303030;border-radius:9px;overflow:hidden}.target-track span{display:block;height:100%;background:#b7f500;border-radius:9px}.progress-toolbar,.records-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-top:10px}.progress-toolbar h2,.records-head h2{font-size:19px;margin:0}.range-switch{display:flex;background:#171717;border:1px solid #303030;border-radius:9px;padding:3px;gap:2px}.range-switch button{border:0;background:transparent;color:#888;font-size:8px;padding:7px 8px;border-radius:6px}.range-switch button.selected{background:#b7f500;color:#090909;font-weight:800}.chart-panel{background:#151515;border:1px solid #292929;border-radius:13px;padding:14px 10px 10px;min-width:0}.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 4px 12px}.chart-head strong{font-size:11px}.chart-head small{font-size:9px;color:#888}.chart-head select,.test-form select,.test-form input{background:#090909;color:#eee;border:1px solid #383838;border-radius:8px;padding:9px;font-size:10px;max-width:150px}.chart-empty{padding:28px 12px;text-align:center;color:#777;font-size:11px;line-height:1.5}.records-head{margin-top:14px;align-items:center}.records-head .secondary-button{width:auto;white-space:nowrap;padding:11px}.test-form{display:grid;gap:12px;padding:14px;background:#151515;border:1px solid #333;border-radius:12px}.test-form label{display:grid;gap:6px;color:#aaa;font-size:10px}.test-form select,.test-form input{max-width:none;width:100%;padding:11px}.record-list{display:grid;gap:8px}.record-list article{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#151515;border:1px solid #292929;border-radius:11px;padding:13px}.record-list article div{display:grid;gap:5px;min-width:0}.record-list strong{font-size:11px}.record-list small{font-size:9px;color:#888;overflow-wrap:anywhere}.record-list b{color:#b7f500;font-size:12px;white-space:nowrap}@media(max-width:360px){.progress-target-grid{grid-template-columns:1fr 1fr}.progress-toolbar{align-items:start;flex-direction:column}.range-switch{align-self:flex-end}}
 
 .data-management{margin-top:28px;padding-top:22px;border-top:1px solid #292929}.data-management h2{font-size:19px;margin:0 0 8px}.data-management>p{font-size:11px;line-height:1.6;color:#888;margin:0 0 14px}.backup-actions{display:grid;gap:8px}.backup-actions .secondary-button{display:flex;align-items:center;justify-content:center;gap:8px}.backup-actions button:disabled{opacity:.5;cursor:wait}.backup-note{display:flex;gap:9px;align-items:flex-start;color:#888;font-size:10px;line-height:1.5;margin-top:13px}.backup-note svg{color:#b7f500;flex:0 0 auto}.backup-message{margin-top:12px;padding:11px 12px;background:#171717;border:1px solid #343434;border-radius:9px;color:#c9e980;font-size:10px;line-height:1.5}
+
+
+/* EMOM minute-by-minute feedback and recovery timer */
+.minute-dots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.minute-result{min-width:0;min-height:62px;padding:8px 4px;border:1px solid #303030;border-radius:9px;background:#202020;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#888}
+.minute-result small{font-size:8px;letter-spacing:.8px;color:#aaa}
+.minute-result strong{font-size:18px;line-height:1;color:#f4f4f4;font-variant-numeric:tabular-nums}
+.minute-result span{font-size:8px;color:#888}
+.minute-result.done{background:#202900;border-color:#526900}
+.minute-result.done strong,.minute-result.done small{color:#b7f500}
+.minute-result.missed{background:#291717;border-color:#593232}
+.minute-result.missed strong,.minute-result.missed small{color:#ff9c9c}
+.minute-result.partial{background:#2a2515;border-color:#625221}
+.minute-result.partial strong,.minute-result.partial small{color:#f2d273}
+.emom-clock-meta{display:grid;grid-template-columns:1fr auto;gap:7px 12px;align-items:center;margin:14px auto 0;max-width:260px;text-align:left}
+.emom-clock-meta span{font-size:10px;color:#888}
+.emom-clock-meta strong{font-size:12px;letter-spacing:0;font-variant-numeric:tabular-nums}
+.emom-clock .emom-paused-label{color:#f2d273;font-weight:700}
+.emom-entry-hint,.emom-resume-note{margin:0;font-size:10px;line-height:1.5}
+.emom-progression{display:grid;gap:6px;background:#101010;border:1px solid #303030;border-radius:10px;padding:13px}
+.emom-progression strong{font-size:11px;color:#b7f500}
+.emom-progression span{font-size:10px;color:#aaa;line-height:1.5}
+.rest-timer-panel{display:grid;gap:12px;border:1px solid #3a3a3a;border-radius:13px;padding:14px;background:linear-gradient(145deg,#181818,#101010)}
+.rest-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rest-panel-head>div{display:grid;gap:6px}
+.rest-panel-head small{font-size:9px;letter-spacing:1.2px;color:#aaa}
+.rest-panel-head strong{font-size:35px;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#f4f4f4}
+.rest-status{font-size:8px;letter-spacing:.8px;border:1px solid #3a3a3a;border-radius:20px;padding:6px 8px;color:#999;white-space:nowrap}
+.rest-status.active{color:#b7f500;border-color:#526900;background:#202900}
+.rest-status.done{color:#b7f500;border-color:#526900}
+.rest-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.rest-presets button{border:1px solid #383838;border-radius:8px;padding:9px 4px;background:#202020;color:#aaa;font-size:10px}
+.rest-presets button.selected{background:#b7f500;border-color:#b7f500;color:#090909;font-weight:800}
+.rest-presets button:disabled{opacity:.45;cursor:not-allowed}
+.rest-timer-panel .secondary-button{display:flex;align-items:center;justify-content:center;gap:7px}
+.rest-timer-panel p{margin:0;font-size:9px;line-height:1.5;color:#888}
+@media(max-width:370px){.minute-dots{grid-template-columns:repeat(4,minmax(0,1fr))}.minute-result{min-height:56px}.rest-panel-head strong{font-size:30px}}
