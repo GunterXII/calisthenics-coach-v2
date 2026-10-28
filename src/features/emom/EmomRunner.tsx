@@ -32,7 +32,7 @@ function readDraft(): EmomDraft | null {
     const raw = window.localStorage.getItem(DRAFT_KEY)
     if (!raw) return null
     const value = JSON.parse(raw) as Partial<EmomDraft>
-    if (value.version !== 1 || !Array.isArray(value.minutes)) return null
+    if (value.version !== 1 || !Array.isArray(value.minutes) || typeof value.startedAt !== 'number') return null
     return value as EmomDraft
   } catch {
     return null
@@ -138,6 +138,10 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
   // Draft locale scritto a ogni modifica significativa: chiudere o ricaricare la pagina
   // non elimina la sessione. Al riavvio il cronometro recupera il tempo reale trascorso.
   useEffect(() => {
+    if (startedAt === null) {
+      try { window.localStorage.removeItem(DRAFT_KEY) } catch {}
+      return
+    }
     const draft: EmomDraft = {
       version: 1, exerciseId, variation, duration, repsPerMinute, load, startedAt,
       pausedAt, pauseMs, minutes, activeInputMinute, actualInput, actualTouched, rir, technique, notes,
@@ -275,7 +279,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
   return <div className="modal-backdrop"><div className="modal emom-modal">
     <div className="modal-head"><div><div className="eyebrow">SESSIONE STRUTTURATA</div><h2>EMOM runner</h2></div><button className="close-button" onClick={onClose} aria-label="Chiudi; sessione salvata automaticamente">×</button></div>
     {startedAt === null ? <>
-      {initialDraft && <p className="muted emom-resume-note">Configurazione precedente recuperata. Avvia per iniziare una nuova sessione.</p>}
+      {initialDraft && startedAt === null && <p className="muted emom-resume-note">La bozza precedente non era stata avviata. Puoi iniziare con la configurazione qui sotto.</p>}
       <label>Esercizio<select value={exerciseId} onChange={e => setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
       <label>Variante<input value={variation} onChange={e => setVariation(e.target.value)} /></label>
       <div className="form-grid"><label>Durata (min)<input type="number" min="1" max="60" value={duration} onChange={e => setDuration(Math.min(60, Math.max(1, Number(e.target.value) || 1)))} /></label><label>Reps / min<input type="number" min="1" max="100" value={repsPerMinute} onChange={e => setRepsPerMinute(Math.min(100, Math.max(1, Number(e.target.value) || 1)))} /></label></div>
