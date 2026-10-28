@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
+    manifest: 'build-manifest.json',
     rollupOptions: {
       output: {
         manualChunks(id) {
