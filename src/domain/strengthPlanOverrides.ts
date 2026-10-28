@@ -41,3 +41,14 @@ export function saveStrengthPlanOverride(override: StrengthPlanOverride) {
     // The current workout can still be logged if localStorage is unavailable.
   }
 }
+export function listStrengthPlanOverrides() {
+  return readAll()
+}
+
+export function replaceStrengthPlanOverrides(overrides: StrengthPlanOverride[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides))
+  } catch {
+    // Keep the existing local data if the browser storage is full or unavailable.
+  }
+}
