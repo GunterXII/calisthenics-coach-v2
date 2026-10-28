@@ -39,6 +39,11 @@ function readDraft(): EmomDraft | null {
   }
 }
 
+function localDateString(timestamp: number) {
+  const date = new Date(timestamp)
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
 function formatClock(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds))
   return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0')
@@ -229,7 +234,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
       }
       const workout = {
         id: crypto.randomUUID(),
-        date: new Date(startedAt).toISOString().slice(0, 10),
+        date: localDateString(startedAt),
         dayLabel: 'Sessione EMOM',
         kind: 'emom' as const,
         title: (EXERCISES.find(e => e.id === exerciseId)?.name ?? 'EMOM') + ' · ' + duration + ' min',
