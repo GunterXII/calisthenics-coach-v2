@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Plus, Minus, Trash2, X, Timer, RotateCcw } from 'lucide-react'
-import { EXERCISES, VALID_LOADS_KG } from '../../data/program'
+import { EXERCISES, VALID_LOADS_KG, type Prescription } from '../../data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from '../../types'
 import { suggestStrengthProgression } from '../../domain/strengthProgression'
 import { getStrengthPlanOverride, saveStrengthPlanOverride } from '../../domain/strengthPlanOverrides'
 
-type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void> }
+type Props = { workouts: WorkoutLog[]; dayLabel: string; onClose: () => void; onSave: (w: WorkoutLog) => Promise<void>; prescriptions?: Prescription[] }
 
 function previous(workouts: WorkoutLog[], id: ExerciseId) {
   for (const w of workouts) {
@@ -21,15 +21,29 @@ function makeSet(id: ExerciseId, prev?: SetLog): SetLog {
   return { id: crypto.randomUUID(), exerciseId: id, variation, addedLoadKg: override?.addedLoadKg ?? prev?.addedLoadKg ?? 0, targetReps, actualReps: targetReps, rir: prev?.rir ?? 2, completed: true, technique: 'good', notes: '', createdAt: Date.now() }
 }
 
+function makeScheduledSets(prescriptions: Prescription[] = []): SetLog[] {
+  return prescriptions.filter(p => p.durationMinutes === undefined && !p.optional).flatMap(p => {
+    const variation = p.variation
+    const override = getStrengthPlanOverride(p.exerciseId, variation)
+    const targetReps = override?.targetReps ?? p.reps ?? 6
+    const addedLoadKg = override?.addedLoadKg ?? p.addedLoadKg
+    return Array.from({ length: p.sets ?? 1 }, () => ({
+      id: crypto.randomUUID(), exerciseId: p.exerciseId, variation, addedLoadKg,
+      targetReps, actualReps: targetReps, rir: 2, completed: true,
+      technique: 'good' as const, notes: '', createdAt: Date.now(),
+    }))
+  })
+}
+
 function formatRest(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds))
   return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0')
 }
 
-export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave }: Props) {
+export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, prescriptions = [] }: Props) {
   const [title, setTitle] = useState(dayLabel === 'Sessione libera' ? 'Allenamento' : dayLabel)
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [sets, setSets] = useState<SetLog[]>(() => [makeSet('pull-up', previous(workouts, 'pull-up'))])
+  const [sets, setSets] = useState<SetLog[]>(() => { const scheduled = makeScheduledSets(prescriptions); return scheduled.length ? scheduled : [makeSet('pull-up', previous(workouts, 'pull-up'))] })
   const [selected, setSelected] = useState<ExerciseId>('pull-up')
   const [fatigue, setFatigue] = useState<number | null>(null)
   const [sleepHours, setSleepHours] = useState<number | null>(null)
