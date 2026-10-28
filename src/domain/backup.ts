@@ -1,17 +1,39 @@
 import { db } from '../database/db'
-import type { EmomLog, PersonalRecord, WorkoutLog } from '../types'
+import type { EmomLog, PersonalRecord, WorkoutLog, ExerciseId } from '../types'
+import { listStrengthPlanOverrides, replaceStrengthPlanOverrides, type StrengthPlanOverride } from './strengthPlanOverrides'
+import { listEmomPlanOverrides, replaceEmomPlanOverrides, type EmomPlanOverride } from './emomPlanOverrides'
 
 export interface CoachBackup {
   app: 'calisthenics-coach-v2'
-  schemaVersion: 1
+  schemaVersion: 2
   exportedAt: string
   data: { workouts: WorkoutLog[]; emoms: EmomLog[]; records: PersonalRecord[] }
+  settings: {
+    strengthPlanOverrides: StrengthPlanOverride[]
+    emomPlanOverrides: EmomPlanOverride[]
+    cycleWeek: 1 | 2 | 3 | 4
+  }
 }
 export async function createBackup(): Promise<CoachBackup> {
   const [workouts, emoms, records] = await Promise.all([
     db.workouts.toArray(), db.emoms.toArray(), db.records.toArray(),
   ])
-  return { app: 'calisthenics-coach-v2', schemaVersion: 1, exportedAt: new Date().toISOString(), data: { workouts, emoms, records } }
+  let cycleWeek: 1 | 2 | 3 | 4 = 1
+  try {
+    const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week'))
+    if ([1, 2, 3, 4].includes(value)) cycleWeek = value as 1 | 2 | 3 | 4
+  } catch {}
+  return {
+    app: 'calisthenics-coach-v2',
+    schemaVersion: 2,
+    exportedAt: new Date().toISOString(),
+    data: { workouts, emoms, records },
+    settings: {
+      strengthPlanOverrides: listStrengthPlanOverrides(),
+      emomPlanOverrides: listEmomPlanOverrides(),
+      cycleWeek,
+    },
+  }
 }
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -19,10 +41,27 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function hasId(value: unknown): value is { id: string } {
   return isObject(value) && typeof value.id === 'string' && value.id.length > 0
 }
+function isExerciseId(value: unknown): value is ExerciseId {
+  return ['pull-up', 'chin-up', 'dip', 'push-up', 'diamond-push-up', 'muscle-up', 'straight-bar-dip', 'explosive-pull-up'].includes(String(value))
+}
+function isStrengthOverride(value: unknown): value is StrengthPlanOverride {
+  return isObject(value) && isExerciseId(value.exerciseId) && typeof value.variation === 'string' &&
+    Number.isFinite(value.targetReps) && Number(value.targetReps) >= 1 &&
+    [0, 5, 10, 15, 20, 25, 30].includes(Number(value.addedLoadKg)) &&
+    Number.isFinite(value.savedAt)
+}
+function isEmomOverride(value: unknown): value is EmomPlanOverride {
+  return isObject(value) && isExerciseId(value.exerciseId) && typeof value.variation === 'string' &&
+    Number.isFinite(value.duration) && Number(value.duration) >= 1 && Number(value.duration) <= 60 &&
+    Number.isFinite(value.repsPerMinute) && Number(value.repsPerMinute) >= 1 && Number(value.repsPerMinute) <= 100 &&
+    [0, 5, 10, 15, 20, 25, 30].includes(Number(value.load)) && Number.isFinite(value.savedAt)
+}
 export function parseBackup(value: unknown): CoachBackup {
-  if (!isObject(value) || value.app !== 'calisthenics-coach-v2' || value.schemaVersion !== 1 || !isObject(value.data)) {
+  if (!isObject(value) || value.app !== 'calisthenics-coach-v2' ||
+      (value.schemaVersion !== 1 && value.schemaVersion !== 2) || !isObject(value.data)) {
     throw new Error('File non riconosciuto o versione del backup non supportata.')
   }
+  if (typeof value.exportedAt !== 'string') throw new Error('Il backup non contiene una data di esportazione valida.')
   const { workouts, emoms, records } = value.data
   if (!Array.isArray(workouts) || !Array.isArray(emoms) || !Array.isArray(records)) {
     throw new Error('Il backup è incompleto: mancano una o più raccolte.')
@@ -41,7 +80,34 @@ export function parseBackup(value: unknown): CoachBackup {
   for (const r of records) {
     if (!isObject(r) || typeof r.exerciseId !== 'string' || typeof r.reps !== 'number' || typeof r.testedAt !== 'number') throw new Error('Un record personale non è valido.')
   }
-  return value as unknown as CoachBackup
+
+  let strengthPlanOverrides: StrengthPlanOverride[] = []
+  let emomPlanOverrides: EmomPlanOverride[] = []
+  let cycleWeek: 1 | 2 | 3 | 4 = 1
+  if (value.schemaVersion === 2) {
+    if (!isObject(value.settings) || !Array.isArray(value.settings.strengthPlanOverrides) ||
+        !Array.isArray(value.settings.emomPlanOverrides) || ![1, 2, 3, 4].includes(Number(value.settings.cycleWeek))) {
+      throw new Error('Le impostazioni del backup non sono valide.')
+    }
+    if (!value.settings.strengthPlanOverrides.every(isStrengthOverride) ||
+        !value.settings.emomPlanOverrides.every(isEmomOverride)) {
+      throw new Error('Il backup contiene progressioni personalizzate non valide.')
+    }
+    strengthPlanOverrides = value.settings.strengthPlanOverrides
+    emomPlanOverrides = value.settings.emomPlanOverrides
+    cycleWeek = Number(value.settings.cycleWeek) as 1 | 2 | 3 | 4
+  }
+  return {
+    app: 'calisthenics-coach-v2',
+    schemaVersion: 2,
+    exportedAt: value.exportedAt,
+    data: {
+      workouts: workouts as WorkoutLog[],
+      emoms: emoms as EmomLog[],
+      records: records as PersonalRecord[],
+    },
+    settings: { strengthPlanOverrides, emomPlanOverrides, cycleWeek },
+  }
 }
 export async function restoreBackup(backup: CoachBackup): Promise<void> {
   await db.transaction('rw', db.workouts, db.emoms, db.records, async () => {
@@ -52,6 +118,11 @@ export async function restoreBackup(backup: CoachBackup): Promise<void> {
       db.records.bulkAdd(backup.data.records),
     ])
   })
+  replaceStrengthPlanOverrides(backup.settings.strengthPlanOverrides)
+  replaceEmomPlanOverrides(backup.settings.emomPlanOverrides)
+  try {
+    localStorage.setItem('calisthenics-coach-v2:cycle-week', String(backup.settings.cycleWeek))
+  } catch {}
 }
 export function downloadText(filename: string, content: string, type: string): void {
   const blob = new Blob([content], { type })
