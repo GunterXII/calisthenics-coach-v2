@@ -60,16 +60,16 @@ function isClean(log: EmomLog) {
 
 type EmomConfig = { exerciseId: ExerciseId; variation: string; duration: number; repsPerMinute: number; load: number }
 
-export default function EmomRunner({ onClose, initialConfig }: { onClose: () => void; initialConfig?: EmomConfig }) {
+export default function EmomRunner({ onClose, initialConfig, progressionEnabled = true }: { onClose: () => void; initialConfig?: EmomConfig; progressionEnabled?: boolean }) {
   const [initialDraft] = useState<EmomDraft | null>(readDraft)
   const defaultExercise = initialDraft?.exerciseId ?? initialConfig?.exerciseId ?? 'pull-up'
   const defaultVariation = initialDraft?.variation ?? initialConfig?.variation ?? 'Strict'
   const [exerciseId, setExerciseId] = useState<ExerciseId>(defaultExercise)
   const [variation, setVariation] = useState(defaultVariation)
-  const [initialPlanOverride] = useState(() => getEmomPlanOverride(defaultExercise, defaultVariation))
-  const [duration, setDuration] = useState(initialDraft?.duration ?? initialPlanOverride?.duration ?? initialConfig?.duration ?? 10)
-  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? initialConfig?.repsPerMinute ?? 6)
-  const [load, setLoad] = useState(initialDraft?.load ?? initialPlanOverride?.load ?? initialConfig?.load ?? 0)
+  const [initialPlanOverride] = useState(() => progressionEnabled ? getEmomPlanOverride(defaultExercise, defaultVariation) : null)
+  const [duration, setDuration] = useState(initialDraft?.duration ?? initialConfig?.duration ?? initialPlanOverride?.duration ?? 10)
+  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? initialPlanOverride?.repsPerMinute ?? 6)
+  const [load, setLoad] = useState(initialDraft?.load ?? initialConfig?.load ?? initialPlanOverride?.load ?? 0)
   const [progressionChoice, setProgressionChoice] = useState<'accepted' | 'kept' | 'editing' | 'custom' | null>(initialDraft?.progressionChoice ?? null)
   const [nextPlanReps, setNextPlanReps] = useState(initialDraft?.nextPlanReps ?? repsPerMinute)
   const [nextPlanLoad, setNextPlanLoad] = useState(initialDraft?.nextPlanLoad ?? load)
@@ -106,13 +106,13 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
   }, [running])
 
   useEffect(() => {
-    if (startedAt !== null || initialDraft) return
+    if (startedAt !== null || initialDraft || !progressionEnabled) return
     const saved = getEmomPlanOverride(exerciseId, variation)
     if (!saved) return
     setDuration(saved.duration)
     setRepsPerMinute(saved.repsPerMinute)
     setLoad(saved.load)
-  }, [exerciseId, variation, startedAt, initialDraft])
+  }, [exerciseId, variation, startedAt, initialDraft, progressionEnabled])
 
   // Chiude automaticamente i minuti scaduti. Se è stata digitata una prestazione,
   // la usa per il minuto corrente; i minuti non inseriti vengono marcati come saltati.
@@ -284,7 +284,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
     addedLoadKg: load, minutes, startedAt: startedAt ?? Date.now(), endedAt: null,
     pausedAt, accumulatedPauseMs: pauseMs, rir, technique, notes,
   }
-  const suggestion = startedAt !== null && complete && minutes.length >= duration ? suggestEmomProgression(preview, cleanStreak) : null
+  const suggestion = progressionEnabled && startedAt !== null && complete && minutes.length >= duration ? suggestEmomProgression(preview, cleanStreak) : null
   const totalLoggedReps = minutes.reduce((sum, item) => sum + item.actualReps, 0)
   const saveNextPlan = (mode: 'accepted' | 'kept' | 'custom') => {
     if (!suggestion) return
@@ -301,6 +301,7 @@ export default function EmomRunner({ onClose, initialConfig }: { onClose: () => 
 
   return <div className="modal-backdrop"><div className="modal emom-modal">
     <div className="modal-head"><div><div className="eyebrow">SESSIONE STRUTTURATA</div><h2>EMOM runner</h2></div><button className="close-button" onClick={onClose} aria-label="Chiudi; sessione salvata automaticamente">×</button></div>
+    {!progressionEnabled && <div className="deload-banner"><strong>DELOAD · PROGRESSIONE IN PAUSA</strong><span>I target alleggeriti restano attivi; le proposte di aumento automatico sono disattivate durante questa settimana.</span></div>}
     {startedAt === null ? <>
       {initialDraft && startedAt === null && <p className="muted emom-resume-note">La bozza precedente non era stata avviata. Puoi iniziare con la configurazione qui sotto.</p>}
       <label>Esercizio<select value={exerciseId} onChange={e => setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
