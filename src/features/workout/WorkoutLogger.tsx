@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, Minus, Trash2, X, Timer, RotateCcw } from 'lucide-react'
 import { EXERCISES, VALID_LOADS_KG, type Prescription } from '../../data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from '../../types'
@@ -65,6 +65,16 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
   const restRemaining = restEndAt !== null
     ? Math.max(0, Math.ceil((restEndAt - restNow) / 1000))
     : restPausedRemaining ?? restDuration
+
+  const currentSnapshot = JSON.stringify({ title, date, sets, fatigue, sleepHours, pain, notes })
+  const initialSnapshot = useRef(currentSnapshot)
+  const requestClose = () => {
+    if (saving) return
+    if (currentSnapshot !== initialSnapshot.current &&
+      !window.confirm('Chiudere senza salvare? Le modifiche a questa sessione andranno perse.')) return
+    resetRest()
+    onClose()
+  }
 
   useEffect(() => {
     if (restEndAt === null) return
@@ -138,8 +148,8 @@ export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, pre
     }
   }
 
-  return <div className="modal-backdrop" onClick={onClose}><div className="modal logger-modal" onClick={e => e.stopPropagation()}>
-    <div className="modal-head"><div><div className="eyebrow">NUOVA SESSIONE</div><h2>Registra allenamento</h2></div><button className="close-button" onClick={onClose} aria-label="Chiudi"><X size={18} /></button></div>
+  return <div className="modal-backdrop" onClick={requestClose}><div className="modal logger-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-head"><div><div className="eyebrow">NUOVA SESSIONE</div><h2>Registra allenamento</h2></div><button className="close-button" onClick={requestClose} aria-label="Chiudi"><X size={18} /></button></div>
     <label>Titolo<input value={title} onChange={e => setTitle(e.target.value)} /></label><label>Data<input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
 
     <section className="rest-timer-panel" aria-label="Timer di recupero tra le serie">
