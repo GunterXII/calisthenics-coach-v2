@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, Timer, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { db } from './database/db'
+import EmomRunner from './features/emom/EmomRunner'
 import { EXERCISES, TRAINING_WEEK } from './data/program'
 import type { ExerciseId, WorkoutLog } from './types'
 
@@ -16,6 +17,7 @@ const today = TRAINING_WEEK[dayIndex]
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [showQuickLog, setShowQuickLog] = useState(false)
+  const [showEmom, setShowEmom] = useState(false)
   const [exerciseId, setExerciseId] = useState<ExerciseId>('pull-up')
   const [reps, setReps] = useState(1)
   const [load, setLoad] = useState(0)
@@ -43,13 +45,14 @@ export default function App() {
         <div className="stats-grid"><Stat label="SESSIONI TOTALI" value={totalSessions.toString().padStart(2,'0')}/><Stat label="ULTIMI 7 GIORNI" value={weeklyCount.toString().padStart(2,'0')}/><Stat label="CICLO" value="01 / 04"/></div>
         <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>{today.label} <span className="muted">/ {today.focus}</span></h2></div><span className="tag">SETTIMANA BASE</span></div>
         {today.prescriptions.length ? <div className="exercise-list">{today.prescriptions.map((p,i)=><article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{p.durationMinutes ? `${p.durationMinutes} min · ${p.repsPerMinute} rep/min` : `${p.sets} serie · ${p.reps} rep`} · {p.addedLoadKg} kg</span></div><span className="exercise-arrow">↗</span></article>)}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
-        <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button>
+        <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button><button className="secondary-button full" onClick={()=>setShowEmom(true)}><Timer size={17}/> AVVIA EMOM PERSONALIZZATO</button>
       </section>}
       {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">Settimana tipo · 3 settimane di carico + 1 di deload.</p>{TRAINING_WEEK.map(day=><div className="plan-day" key={day.id}><div className="plan-day-head"><strong>{day.label}</strong><span>{day.focus}</span></div>{day.prescriptions.length ? day.prescriptions.map((p,i)=><div className="plan-line" key={i}><span>{p.title}</span><small>{p.durationMinutes ? `${p.durationMinutes}×${p.repsPerMinute}` : `${p.sets}×${p.reps}`} · {p.addedLoadKg} kg</small></div>) : <small className="muted">Riposo</small>}</div>)}</section>}
       {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{workouts.length ? workouts.map(w=><article className="history-card" key={w.id}><div><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie registrate</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)} reps</span></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}</section>}
       {tab === 'progress' && <section><div className="eyebrow">DATI, NON SENSAZIONI</div><h1>Progressi<span>.</span></h1><div className="stats-grid"><Stat label="PULL-UP TARGET" value="30"/><Stat label="DIP TARGET" value="64"/><Stat label="PUSH-UP TARGET" value="100"/></div><div className="empty-state"><TrendingUp size={22}/><p>Registra test massimali e allenamenti per costruire il tuo storico.</p></div></section>}
     </main>
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
+    {showEmom && <EmomRunner onClose={()=>setShowEmom(false)}/>}
     {showQuickLog && <div className="modal-backdrop" onClick={()=>setShowQuickLog(false)}><div className="modal" onClick={e=>e.stopPropagation()}><div className="modal-head"><div><div className="eyebrow">NUOVA REGISTRAZIONE</div><h2>Log rapido</h2></div><button className="close-button" onClick={()=>setShowQuickLog(false)}>×</button></div><label>Esercizio<select value={exerciseId} onChange={e=>setExerciseId(e.target.value as ExerciseId)}>{EXERCISES.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><div className="form-grid"><label>Ripetizioni<input type="number" min="0" value={reps} onChange={e=>setReps(Math.max(0,Number(e.target.value)))}/></label><label>Zavorra<select value={load} onChange={e=>setLoad(Number(e.target.value))}>{[0,5,10,15,20,25,30].map(v=><option key={v} value={v}>{v} kg</option>)}</select></label></div><label>Note<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Tecnica, sensazioni..."/></label><button className="primary-button full" onClick={()=>void addQuickLog()}>SALVA NELLO STORICO</button></div></div>}
   </div>
 }
