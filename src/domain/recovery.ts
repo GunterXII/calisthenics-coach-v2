@@ -6,9 +6,9 @@ export interface RecoveryAlert {
   detail: string
 }
 
-function sessionReps(workout: WorkoutLog, exerciseId: ExerciseId, variation: string) {
+function sessionReps(workout: WorkoutLog, exerciseId: ExerciseId, variation: string, addedLoadKg: number) {
   return workout.setLogs
-    .filter(set => set.exerciseId === exerciseId && set.variation === variation && set.completed)
+    .filter(set => set.exerciseId === exerciseId && set.variation === variation && set.addedLoadKg === addedLoadKg && set.completed)
     .reduce((sum, set) => sum + set.actualReps, 0)
 }
 
@@ -40,22 +40,31 @@ export function getRecoveryAlerts(workouts: WorkoutLog[]): RecoveryAlert[] {
     })
   }
 
+  if (latest.fatigue !== null && latest.fatigue >= 8) {
+    alerts.push({
+      id: 'fatigue',
+      title: 'Fatica percepita elevata',
+      detail: 'Hai registrato fatica 8/10 o superiore: valuta di ridurre temporaneamente il volume del 20–30% e non forzare le serie se la tecnica peggiora.',
+    })
+  }
+
   const keys = new Set<string>()
   for (const workout of ordered.slice(0, 8)) {
     for (const set of workout.setLogs) {
-      if (set.completed) keys.add(set.exerciseId + '::' + set.variation)
+      if (set.completed) keys.add(set.exerciseId + '::' + set.variation + '::' + set.addedLoadKg)
     }
   }
 
   let decliningKey: string | null = null
   for (const key of keys) {
-    const [exercise, ...variationParts] = key.split('::')
-    const variation = variationParts.join('::')
+    const [exercise, ...parts] = key.split('::')
+    const addedLoadKg = Number(parts.pop())
+    const variation = parts.join('::')
     const sessions = ordered
-      .filter(workout => workout.setLogs.some(set => set.exerciseId === exercise as ExerciseId && set.variation === variation && set.completed))
+      .filter(workout => workout.setLogs.some(set => set.exerciseId === exercise as ExerciseId && set.variation === variation && set.addedLoadKg === addedLoadKg && set.completed))
       .slice(0, 3)
     if (sessions.length !== 3) continue
-    const values = sessions.map(workout => sessionReps(workout, exercise as ExerciseId, variation))
+    const values = sessions.map(workout => sessionReps(workout, exercise as ExerciseId, variation, addedLoadKg))
     if (values[0] < values[1] && values[1] < values[2]) {
       decliningKey = key
       break
