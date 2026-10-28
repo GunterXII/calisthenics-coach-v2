@@ -45,6 +45,21 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
     if (startedAt === null) return
     const log: EmomLog = { id: crypto.randomUUID(), exerciseId, variation, durationMinutes: duration, repsPerMinute, addedLoadKg: load, minutes, startedAt, endedAt: Date.now(), pausedAt: null, accumulatedPauseMs: pauseMs, rir, technique, notes }
     await db.emoms.add(log)
+    const workout = {
+      id: crypto.randomUUID(),
+      date: new Date(startedAt).toISOString().slice(0, 10),
+      dayLabel: 'Sessione EMOM',
+      kind: 'emom' as const,
+      title: `${EXERCISES.find(e => e.id === exerciseId)?.name ?? 'EMOM'} · ${duration} min`,
+      setLogs: [],
+      emomLogs: [log],
+      fatigue: null,
+      sleepHours: null,
+      pain: technique === 'pain' ? 'Dolore segnalato durante EMOM' : '',
+      notes,
+      completedAt: Date.now(),
+    }
+    await db.workouts.add(workout)
     onClose()
   }
   const complete = elapsedSeconds >= duration * 60
