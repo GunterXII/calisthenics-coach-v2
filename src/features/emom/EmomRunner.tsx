@@ -49,13 +49,15 @@ function isClean(log: EmomLog) {
     log.technique === 'good' && (log.rir ?? 0) >= 2
 }
 
-export default function EmomRunner({ onClose }: { onClose: () => void }) {
+type EmomConfig = { exerciseId: ExerciseId; variation: string; duration: number; repsPerMinute: number; load: number }
+
+export default function EmomRunner({ onClose, initialConfig }: { onClose: () => void; initialConfig?: EmomConfig }) {
   const [initialDraft] = useState<EmomDraft | null>(readDraft)
-  const [exerciseId, setExerciseId] = useState<ExerciseId>(initialDraft?.exerciseId ?? 'pull-up')
-  const [variation, setVariation] = useState(initialDraft?.variation ?? 'Strict')
-  const [duration, setDuration] = useState(initialDraft?.duration ?? 10)
-  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? 6)
-  const [load, setLoad] = useState(initialDraft?.load ?? 0)
+  const [exerciseId, setExerciseId] = useState<ExerciseId>(initialDraft?.exerciseId ?? initialConfig?.exerciseId ?? 'pull-up')
+  const [variation, setVariation] = useState(initialDraft?.variation ?? initialConfig?.variation ?? 'Strict')
+  const [duration, setDuration] = useState(initialDraft?.duration ?? initialConfig?.duration ?? 10)
+  const [repsPerMinute, setRepsPerMinute] = useState(initialDraft?.repsPerMinute ?? initialConfig?.repsPerMinute ?? 6)
+  const [load, setLoad] = useState(initialDraft?.load ?? initialConfig?.load ?? 0)
   const [startedAt, setStartedAt] = useState<number | null>(initialDraft?.startedAt ?? null)
   const [pausedAt, setPausedAt] = useState<number | null>(initialDraft?.pausedAt ?? null)
   const [pauseMs, setPauseMs] = useState(initialDraft?.pauseMs ?? 0)
