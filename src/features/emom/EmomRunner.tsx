@@ -202,7 +202,7 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
       const log: EmomLog = {
         id: crypto.randomUUID(), exerciseId, variation, durationMinutes: duration,
         repsPerMinute, addedLoadKg: load, minutes: finalMinutes, startedAt,
-        endedAt: endTimestamp, pausedAt: null, accumulatedPauseMs: pauseMs, rir,
+        endedAt: endTimestamp, pausedAt: null, accumulatedPauseMs: pauseMs + (pausedAt !== null ? endTimestamp - pausedAt : 0), rir,
         technique, notes,
       }
       const workout = {
@@ -259,9 +259,9 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
     </> : <>
       <div className="emom-clock">
         <small>MINUTO {Math.min(currentMinute, duration)} / {duration}{complete ? ' · COMPLETATO' : ''}</small>
-        <strong>{totalClock}</strong>
+        <strong>{minuteClock}</strong>
         <div className="progress-track"><span style={{ width: progress + '%' }} /></div>
-        <div className="emom-clock-meta"><span>Totale rimanente</span><strong>{totalClock}</strong><span>Finestra minuto</span><strong>{minuteClock}</strong></div>
+        <div className="emom-clock-meta"><span>Rimanente EMOM</span><strong>{totalClock}</strong><span>Target del minuto</span><strong>{repsPerMinute} reps</strong></div>
         <p>{repsPerMinute} ripetizioni · {load} kg · {formatClock(elapsedSeconds)} trascorsi</p>
         {pausedAt !== null && <p className="emom-paused-label">Timer in pausa</p>}
       </div>
@@ -281,8 +281,8 @@ export default function EmomRunner({ onClose }: { onClose: () => void }) {
       </label>
       <p className="muted emom-entry-hint">Puoi inserire le ripetizioni mentre il timer scorre. Alla fine del minuto la registrazione viene salvata automaticamente; puoi correggerla o registrarla subito con il pulsante qui sotto.</p>
       <div className="form-grid">
-        <button className="secondary-button" onClick={() => recordMinute()} disabled={pausedAt !== null || complete}>REGISTRA MINUTO {currentMinute}</button>
-        <button className="secondary-button" onClick={() => recordMinute(true)} disabled={pausedAt !== null || complete}>SEGNA COME SALTATO</button>
+        <button className="secondary-button" onClick={() => recordMinute()} disabled={pausedAt !== null}>REGISTRA MINUTO {currentMinute}</button>
+        <button className="secondary-button" onClick={() => recordMinute(true)} disabled={pausedAt !== null}>SEGNA COME SALTATO</button>
       </div>
       <div className="form-grid">
         <button className="secondary-button" onClick={running ? pause : resume} disabled={complete}>{running ? 'PAUSA TIMER' : 'RIPRENDI TIMER'}</button>
