@@ -131,9 +131,17 @@ describe('recovery alerts', () => {
 })
 
 describe('strength progression rules', () => {
-  it('suggests a load step only when the prior target was cleanly achieved', () => {
-    const history = [workout('strength', '2026-10-28', 8)]
+  it('suggests a load step for a clean weighted set in the progression range', () => {
+    const history = [workout('strength', '2026-10-28', 8, { addedLoadKg: 20 })]
     const suggestion = suggestStrengthProgression(history, 'pull-up', 'Strict')
+    expect(suggestion?.nextLoadKg).toBe(25)
+    expect(suggestion?.nextRepTarget).toBe(5)
+  })
+
+  it('keeps bodyweight endurance on rep progression rather than forcing added load', () => {
+    const history = [workout('bodyweight', '2026-10-28', 8)]
+    const suggestion = suggestStrengthProgression(history, 'pull-up', 'Strict')
+    expect(suggestion?.nextLoadKg).toBeUndefined()
     expect(suggestion?.nextRepTarget).toBe(9)
   })
 })
