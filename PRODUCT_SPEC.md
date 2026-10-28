@@ -38,5 +38,5 @@ Charts: consecutive max tests, load/reps, weekly volume by exercise/type, EMOM f
 JSON backup/restore and CSV export. Confirm before overwrite/import and destructive deletes.
 
 ## UX and technical
-Mobile-first premium dark UI: #090909 background, #151515/#1D1D1D surfaces, white/gray text, #B7F500 accent, Inter, Lucide, no emoji. Bottom navigation, safe-area support, iOS standalone PWA. No network dependency during workouts.
+Mobile-first premium dark UI: #090909 background, #151515/#1D1D1D surfaces, white/gray text, #D0D4DA accent, Inter, Lucide, no emoji. Bottom navigation, safe-area support, iOS standalone PWA. No network dependency during workouts.
 React + TypeScript + Vite + Tailwind, Dexie/IndexedDB, Recharts, service worker. Firebase Hosting-ready; Auth/Firestore optional later.
