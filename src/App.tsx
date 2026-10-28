@@ -6,6 +6,7 @@ import EmomRunner from './features/emom/EmomRunner'
 import WorkoutLogger from './features/workout/WorkoutLogger'
 import ProgressDashboard from './features/progress/ProgressDashboard'
 import DataManagement from './features/data/DataManagement'
+import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG } from './data/program'
 import type { ExerciseId, SetLog, WorkoutLog } from './types'
 
@@ -35,6 +36,7 @@ export default function App() {
         <div className="eyebrow">{new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()).toUpperCase()}</div>
         <div className="hero-row"><div><h1>Allenati con<br/><span>intenzione.</span></h1><p className="muted">Costanza, tecnica, progressione.</p></div><div className="hero-icon"><Dumbbell size={25}/></div></div>
         <div className="stats-grid"><Stat label="SESSIONI TOTALI" value={totalSessions.toString().padStart(2,'0')}/><Stat label="ULTIMI 7 GIORNI" value={weeklyCount.toString().padStart(2,'0')}/><Stat label="CICLO" value="01 / 04"/></div>
+        <RecoveryAdvisor workouts={workouts} />
         <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>{today.label} <span className="muted">/ {today.focus}</span></h2></div><span className="tag">SETTIMANA BASE</span></div>
         {today.prescriptions.length ? <div className="exercise-list">{today.prescriptions.map((p,i)=><article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{p.durationMinutes ? `${p.durationMinutes} min · ${p.repsPerMinute} rep/min` : `${p.sets} serie · ${p.reps} rep`} · {p.addedLoadKg} kg</span></div><span className="exercise-arrow">↗</span></article>)}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
         <button className="primary-button" onClick={()=>setShowQuickLog(true)}><Plus size={18}/> REGISTRA PRESTAZIONE</button><button className="secondary-button full" onClick={()=>setShowEmom(true)}><Timer size={17}/> AVVIA EMOM PERSONALIZZATO</button>
