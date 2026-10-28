@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Activity, CalendarDays, ChartNoAxesCombined, Dumbbell, History, Plus, Timer, Pencil, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { db } from './database/db'
 import EmomRunner from './features/emom/EmomRunner'
 import WorkoutLogger from './features/workout/WorkoutLogger'
@@ -111,6 +111,12 @@ export default function App() {
 }
 
 function WorkoutEditor({workout,onChange,onClose,onSave}:{workout:WorkoutLog;onChange:(w:WorkoutLog)=>void;onClose:()=>void;onSave:()=>void}) {
+  const originalSnapshot = useRef(JSON.stringify(workout))
+  const requestClose = () => {
+    if (JSON.stringify(workout) !== originalSnapshot.current &&
+      !window.confirm('Annullare le modifiche non salvate a questa sessione?')) return
+    onClose()
+  }
   const patch=(id:string,values:Partial<SetLog>)=>onChange({...workout,setLogs:workout.setLogs.map(s=>s.id===id?{...s,...values,completed:values.completed ?? (values.actualReps!==undefined ? true : s.completed)}:s)})
   const patchEmom=(id:string,values:Partial<EmomLog>)=>onChange({...workout,emomLogs:workout.emomLogs.map(log=>log.id===id?{...log,...values}:log)})
   const patchMinute=(emomId:string,minute:number,values:Partial<EmomLog['minutes'][number]>)=>onChange({
@@ -124,8 +130,8 @@ function WorkoutEditor({workout,onChange,onClose,onSave}:{workout:WorkoutLog;onC
       }),
     }),
   })
-  return <div className="modal-backdrop" onClick={onClose}><div className="modal editor-modal" onClick={e=>e.stopPropagation()}>
-    <div className="modal-head"><div><div className="eyebrow">MODIFICA REGISTRAZIONE</div><h2>{workout.title}</h2></div><button className="close-button" onClick={onClose}>×</button></div>
+  return <div className="modal-backdrop" onClick={requestClose}><div className="modal editor-modal" onClick={e=>e.stopPropagation()}>
+    <div className="modal-head"><div><div className="eyebrow">MODIFICA REGISTRAZIONE</div><h2>{workout.title}</h2></div><button className="close-button" onClick={requestClose}>×</button></div>
     <label>Titolo<input value={workout.title} onChange={e=>onChange({...workout,title:e.target.value})}/></label>
     <label>Data<input type="date" value={workout.date} onChange={e=>onChange({...workout,date:e.target.value})}/></label>
     {workout.setLogs.length > 0 && <>
