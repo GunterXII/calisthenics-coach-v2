@@ -35,6 +35,10 @@ function makeScheduledSets(prescriptions: Prescription[] = []): SetLog[] {
   })
 }
 
+function localDateString(date = new Date()) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
 function formatRest(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds))
   return String(Math.floor(safe / 60)).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0')
@@ -42,7 +46,7 @@ function formatRest(seconds: number) {
 
 export default function WorkoutLogger({ workouts, dayLabel, onClose, onSave, prescriptions = [] }: Props) {
   const [title, setTitle] = useState(dayLabel === 'Sessione libera' ? 'Allenamento' : dayLabel)
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(localDateString())
   const [sets, setSets] = useState<SetLog[]>(() => { const scheduled = makeScheduledSets(prescriptions); return scheduled.length ? scheduled : [makeSet('pull-up', previous(workouts, 'pull-up'))] })
   const [selected, setSelected] = useState<ExerciseId>('pull-up')
   const [fatigue, setFatigue] = useState<number | null>(null)
