@@ -10,7 +10,7 @@ export function suggestStrengthProgression(history:WorkoutLog[],exerciseId:Exerc
  const clean=sets.every(s=>s.completed&&s.actualReps>=s.targetReps&&s.technique==='good'&&(s.rir??0)>=2)
  if(!clean)return {title:'Consolida il carico attuale',detail:'Non tutte le serie hanno raggiunto il target con tecnica buona e almeno 2 RIR. Ripeti il livello.'}
  const maxTarget=Math.max(...sets.map(s=>s.targetReps))
- const nextLoad=VALID_LOADS_KG.find(v=>v===load+5)
+ const nextLoad=load>0?VALID_LOADS_KG.find(v=>v===load+5):undefined
  if(maxTarget>=8&&nextLoad!==undefined)return {title:'Valuta +5 kg',detail:`Hai completato tutte le serie a ${load} kg con margine. Passa a ${nextLoad} kg e riparti da 5–6 ripetizioni.`,nextLoadKg:nextLoad,nextRepTarget:5}
  return {title:'Aumenta le ripetizioni',detail:'Mantieni il carico e aggiungi 1 ripetizione per serie nella prossima seduta.',nextRepTarget:maxTarget+1}
 }
