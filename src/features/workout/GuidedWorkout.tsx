@@ -109,7 +109,7 @@ function previousPerformance(workouts: WorkoutLog[], prescription: Prescription,
     if (!matching.length) continue
     const set = matching[index] ?? matching[matching.length - 1]
     const load = set.addedLoadKg > 0 ? '+ ' + set.addedLoadKg + ' kg' : 'corpo libero'
-    const status = !set.completed && set.actualReps === 0 ? ' · non completata' : ''
+    const status = !set.completed ? (set.actualReps === 0 ? ' · non completata' : ' · parziale') : ''
     return { reps: set.actualReps, detail: 'Serie ' + Math.min(index + 1, matching.length) + status + ' · ' + load + ' · ' + workout.date }
   }
   return null
@@ -185,7 +185,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClo
       }
       setSetIndex(value => value + 1)
     } else if (current < progress.length - 1) {
-      if (item?.roundEnd) {
+      if (item?.roundEnd && progress[current + 1]?.roundType === item.roundType) {
         const duration = item.roundType === 'circuit' ? Math.max(180, restSeconds) : restSeconds
         setRestPaused(null)
         setRestEnd(Date.now() + duration * 1000)
