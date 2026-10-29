@@ -42,9 +42,9 @@ export const TRAINING_WEEK: TrainingDay[] = [
   {
       id: 'tue', label: 'Martedì', focus: 'Trazione e forza',
       prescriptions: [
-        { exerciseId: 'pull-up', title: 'Pull-up EMOM', durationMinutes: 10, repsPerMinute: 6, addedLoadKg: 0, variation: 'Strict', notes: '10 minuti a corpo libero. Aumenta a 7 rep/min solo dopo sessioni pulite.' },
-        { exerciseId: 'pull-up', title: 'Pull-up zavorrati · top set', sets: 1, reps: 5, addedLoadKg: 25, variation: 'Strict · top set', notes: '1×5 @25 kg; lascia almeno 1–2 RIR.' },
-        { exerciseId: 'pull-up', title: 'Pull-up zavorrati · back-off', sets: 2, reps: 6, addedLoadKg: 20, variation: 'Strict · back-off', notes: '2×6–8 @20 kg.' },
+        { exerciseId: 'pull-up', title: 'Pull-up EMOM', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 0, variation: 'Strict', notes: '10×7 a corpo libero. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
+        { exerciseId: 'pull-up', title: 'Pull-up zavorrati · top set', sets: 1, reps: 6, addedLoadKg: 25, variation: 'Strict · top set', notes: '1×6 @25 kg; lascia almeno 1–2 RIR e non forzare le ultime ripetizioni.' },
+        { exerciseId: 'pull-up', title: 'Pull-up zavorrati · back-off', sets: 2, reps: 7, addedLoadKg: 20, variation: 'Strict · back-off', notes: '2×7 @20 kg; porta prima entrambe le serie a 8 reps.' },
         { exerciseId: 'pull-up', title: 'Drop set pull-up', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane: una serie controllata dopo aver tolto la zavorra; non arrivare a cedimento tecnico.' },
         { exerciseId: 'chin-up', title: 'Chin-up zavorrati', sets: 3, reps: 8, addedLoadKg: 10, variation: 'Supina', notes: '3×8–10 @10–15 kg.' },
       ],
@@ -52,9 +52,9 @@ export const TRAINING_WEEK: TrainingDay[] = [
   {
       id: 'wed', label: 'Mercoledì', focus: 'Spinta e ipertrofia',
       prescriptions: [
-        { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 6, addedLoadKg: 5, variation: 'Parallele', notes: '10 minuti ×6–8 ripetizioni al minuto @5 kg. Aumenta gradualmente le reps/min mantenendo tecnica e margine; poi valuta l’aumento della zavorra.' },
-        { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 8, addedLoadKg: 25, variation: 'Parallele · top set', notes: '1×8–10 @25–30 kg.' },
-        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 2, reps: 10, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '2×10–12 @20 kg.' },
+        { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 5, variation: 'Parallele', notes: '10×7 @5 kg. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
+        { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 10, addedLoadKg: 30, variation: 'Parallele · top set', notes: '1×10 @30 kg; mantieni 1–2 RIR e passa a più serie solo quando il set resta pulito.' },
+        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 3, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '3×12 @20 kg; se la terza serie cala nettamente, fermati a 2 serie e consolida.' },
         { exerciseId: 'dip', title: 'Drop set dip', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane, solo se spalle e gomiti sono senza fastidi.' },
         { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · superset', pairedWith: 'diamond-push-up', notes: '3–4 round ×12–15 @15–20 kg; alterna con diamond push-up.' },
         { exerciseId: 'diamond-push-up', title: 'Diamond push-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Strict · superset', pairedWith: 'push-up', notes: '8–10 ripetizioni a corpo libero dopo i push-up zavorrati.' },
@@ -65,8 +65,8 @@ export const TRAINING_WEEK: TrainingDay[] = [
       id: 'fri', label: 'Venerdì', focus: 'Muscle-up e potenza',
       prescriptions: [
         { exerciseId: 'muscle-up', title: 'Muscle-up + straight-bar dip', sets: 4, reps: 1, addedLoadKg: 0, variation: 'Quality complex', pairedWith: 'straight-bar-dip', notes: '4 round: 1 muscle-up + 6–8 straight-bar dip; riposa 2–3 minuti.' },
-        { exerciseId: 'straight-bar-dip', title: 'Straight-bar dip · complex', sets: 4, reps: 6, addedLoadKg: 0, variation: 'Quality complex', pairedWith: 'muscle-up', notes: '6–8 ripetizioni dopo ogni muscle-up del complex.' },
-        { exerciseId: 'muscle-up', title: 'Muscle-up EMOM', durationMinutes: 8, repsPerMinute: 2, addedLoadKg: 0, variation: 'Strict', notes: '8×2; passa a 3 solo se tutte le ripetizioni sono pulite e veloci.' },
+        { exerciseId: 'straight-bar-dip', title: 'Straight-bar dip · complex', sets: 4, reps: 10, addedLoadKg: 0, variation: 'Quality complex', pairedWith: 'muscle-up', notes: '10 ripetizioni dopo ogni muscle-up; mantieni la transizione e il lockout puliti.' },
+        { exerciseId: 'muscle-up', title: 'Muscle-up EMOM', durationMinutes: 8, repsPerMinute: 3, addedLoadKg: 0, variation: 'Strict', notes: '8×3. Consolida 3 ripetizioni al minuto senza perdere altezza, transizione o controllo; se la qualità cala, torna a 2.' },
         { exerciseId: 'explosive-pull-up', title: 'Trazioni esplosive', sets: 3, reps: 4, addedLoadKg: 0, variation: 'Esplosive', notes: '3–4×4–5 a corpo libero; interrompi il set se perdi esplosività.' },
         { exerciseId: 'push-up', title: 'Push-up EMOM zavorrati', durationMinutes: 10, repsPerMinute: 10, addedLoadKg: 5, variation: 'Strict', notes: '10×10–12 @5 kg. Se il venerdì peggiora, riduci a 6–8 minuti.' },
       ],
