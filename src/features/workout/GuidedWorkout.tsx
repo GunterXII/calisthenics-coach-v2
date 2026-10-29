@@ -149,6 +149,10 @@ export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClo
   const performanceIndex = item?.roundNumber ? item.roundNumber - 1 : setIndex
   const lastPerformance = p ? previousPerformance(workouts, p, performanceIndex) : null
   const allDone = current >= progress.length
+  const totalUnits = progress.reduce((sum, entry) => sum + entry.sets.length, 0)
+  const completedUnits = progress.slice(0, current).reduce((sum, entry) => sum + entry.sets.length, 0) +
+    setIndex + (currentSet?.completed ? 1 : 0)
+  const progressPercent = totalUnits ? Math.min(100, completedUnits / totalUnits * 100) : 0
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 250)
     return () => window.clearInterval(id)
@@ -263,7 +267,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClo
         <div><span>ALLENAMENTO GUIDATO</span><strong>{dayLabel.toUpperCase()}</strong></div>
         <time>{clock(elapsed)}</time>
       </header>
-      <div className="guided-progress"><span style={{ width: ((current + (currentSet?.completed ? 1 : 0)) / progress.length * 100) + '%' }}/></div>
+      <div className="guided-progress"><span style={{ width: progressPercent + '%' }}/></div>
       {showFinish || allDone ? <section className="guided-finish">
         <span className="eyebrow">SESSIONE COMPLETATA</span><h1>Ottimo lavoro<span>.</span></h1><strong>{clock(elapsed)}</strong>
         <p>{progress.reduce((n, x) => n + x.sets.filter(s => s.completed).length, 0)} completati · {progress.reduce((n, x) => n + x.sets.filter(s => s.skipped).length, 0)} saltati</p>
