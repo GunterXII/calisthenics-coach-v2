@@ -32,15 +32,16 @@ export function getEmomPlanOverride(exerciseId: ExerciseId, variation: string) {
   return readAll().find(item => item.exerciseId === exerciseId && item.variation === variation) ?? null
 }
 
-export function saveEmomPlanOverride(override: EmomPlanOverride) {
+export function saveEmomPlanOverride(override: EmomPlanOverride): boolean {
   const current = readAll().filter(item =>
     !(item.exerciseId === override.exerciseId && item.variation === override.variation)
   )
   current.push({ ...override, savedAt: Date.now() })
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current))
+    return true
   } catch {
-    // EMOM registration still works if localStorage is unavailable.
+    return false
   }
 }
 export function listEmomPlanOverrides() {
