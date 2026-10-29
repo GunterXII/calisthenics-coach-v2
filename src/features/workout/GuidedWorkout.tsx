@@ -227,18 +227,20 @@ export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClo
     const finishedAt = Date.now()
     const setLogs: SetLog[] = []
     const emomLogs: EmomLog[] = []
-    progress.forEach(({ prescription, sets }) => {
+    const sessionId = workoutId.current ?? crypto.randomUUID()
+    workoutId.current = sessionId
+    progress.forEach(({ prescription, sets }, itemIndex) => {
       if (prescription.durationMinutes) {
         emomLogs.push({
-          id: crypto.randomUUID(), exerciseId: prescription.exerciseId, variation: prescription.variation,
+          id: sessionId + '-emom-' + itemIndex, exerciseId: prescription.exerciseId, variation: prescription.variation,
           durationMinutes: sets.length, repsPerMinute: prescription.repsPerMinute ?? 1,
           addedLoadKg: prescription.addedLoadKg,
           minutes: sets.map((s, i) => ({ minute: i + 1, targetReps: s.target, actualReps: s.skipped ? 0 : s.actual, skipped: s.skipped, completed: s.completed && !s.skipped })),
           startedAt, endedAt: finishedAt, pausedAt: null, accumulatedPauseMs: 0, rir: null, technique: 'good', notes: '',
         })
       } else {
-        sets.forEach(s => setLogs.push({
-          id: crypto.randomUUID(), exerciseId: prescription.exerciseId, variation: prescription.variation,
+        sets.forEach((s, setIndex) => setLogs.push({
+          id: sessionId + '-set-' + itemIndex + '-' + setIndex, exerciseId: prescription.exerciseId, variation: prescription.variation,
           addedLoadKg: prescription.addedLoadKg, targetReps: s.target, actualReps: s.skipped ? 0 : s.actual,
           rir: null, completed: s.completed && !s.skipped, technique: 'good',
           notes: s.skipped ? 'Saltata nell’allenamento guidato.' : '', createdAt: finishedAt,
@@ -246,7 +248,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClo
       }
     })
     const workout: WorkoutLog = {
-      id: workoutId.current ?? crypto.randomUUID(), date: dateKey(), dayLabel, kind: emomLogs.length && !setLogs.length ? 'emom' : 'strength',
+      id: sessionId, date: dateKey(), dayLabel, kind: emomLogs.length && !setLogs.length ? 'emom' : 'strength',
       title: dayLabel + ' · Allenamento guidato', setLogs, emomLogs, fatigue: null, sleepHours: null,
       pain: '', notes: 'Registrato tramite Allenamento guidato.', completedAt: finishedAt,
     }
