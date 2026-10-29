@@ -7,8 +7,8 @@ import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
 import PlanEditor from './features/plan/PlanEditor'
 import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek, type Prescription } from './data/program'
-import { getStrengthPlanOverride } from './domain/strengthPlanOverrides'
-import { getEmomPlanOverride } from './domain/emomPlanOverrides'
+import { getStrengthPlanOverride, saveStrengthPlanOverride } from './domain/strengthPlanOverrides'
+import { getEmomPlanOverride, saveEmomPlanOverride } from './domain/emomPlanOverrides'
 import type { EmomLog, ExerciseId, SetLog, TrainingSession, WorkoutLog } from './types'
 
 type Tab = 'today' | 'plan' | 'history' | 'progress'
@@ -40,6 +40,50 @@ function formatDuration(totalSeconds: number) {
 }
 function localDateKey(date = new Date()) {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+
+const PLAN_REFRESH_KEY = 'calisthenics-coach-v2:plan-refresh:2026-10-v2'
+function migratePlanProgression(): boolean {
+  try {
+    if (localStorage.getItem(PLAN_REFRESH_KEY) === 'done') return false
+    let changed = false
+    const emomUpdates = [
+      { exerciseId: 'pull-up' as ExerciseId, variation: 'Strict', duration: 10, repsPerMinute: 6, load: 0, next: 7 },
+      { exerciseId: 'dip' as ExerciseId, variation: 'Parallele', duration: 10, repsPerMinute: 6, load: 5, next: 7 },
+      { exerciseId: 'muscle-up' as ExerciseId, variation: 'Strict', duration: 8, repsPerMinute: 2, load: 0, next: 3 },
+    ]
+    for (const item of emomUpdates) {
+      const saved = getEmomPlanOverride(item.exerciseId, item.variation)
+      if (saved && saved.duration === item.duration && saved.repsPerMinute === item.repsPerMinute && saved.load === item.load) {
+        saveEmomPlanOverride({ ...saved, repsPerMinute: item.next, savedAt: Date.now() })
+        changed = true
+      }
+    }
+    const strengthUpdates = [
+      { exerciseId: 'pull-up' as ExerciseId, variation: 'Strict · top set', reps: 5, load: 25, nextReps: 6 },
+      { exerciseId: 'pull-up' as ExerciseId, variation: 'Strict · back-off', reps: 6, load: 20, nextReps: 7 },
+      { exerciseId: 'dip' as ExerciseId, variation: 'Parallele · top set', reps: 8, load: 25, nextReps: 10, nextLoad: 30 },
+      { exerciseId: 'dip' as ExerciseId, variation: 'Parallele · back-off', reps: 10, load: 20, nextReps: 12, nextSets: 3 },
+      { exerciseId: 'straight-bar-dip' as ExerciseId, variation: 'Quality complex', reps: 6, load: 0, nextReps: 10 },
+    ]
+    for (const item of strengthUpdates) {
+      const saved = getStrengthPlanOverride(item.exerciseId, item.variation)
+      if (saved && saved.targetReps === item.reps && saved.addedLoadKg === item.load) {
+        saveStrengthPlanOverride({
+          ...saved,
+          targetReps: item.nextReps,
+          ...(item.nextLoad === undefined ? {} : { addedLoadKg: item.nextLoad }),
+          ...(item.nextSets === undefined ? {} : { sets: item.nextSets }),
+          savedAt: Date.now(),
+        })
+        changed = true
+      }
+    }
+    localStorage.setItem(PLAN_REFRESH_KEY, 'done')
+    return changed
+  } catch {
+    return false
+  }
 }
 
 function withSavedProgression(prescription: Prescription): Prescription {
@@ -81,6 +125,10 @@ export default function App() {
   const oldestIncludedKey = localDateKey(oldestIncludedDate)
   const weeklyCount = useMemo(() => workouts.filter(w => w.date >= oldestIncludedKey && w.date <= todayKey).length, [workouts, oldestIncludedKey, todayKey])
   const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek, today.id, planRevision])
+
+  useEffect(() => {
+    if (migratePlanProgression()) setPlanRevision(value => value + 1)
+  }, [])
 
   useEffect(() => {
     try {
@@ -170,7 +218,7 @@ export default function App() {
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>{setEditing(null);setEditingOriginalDate(null)}} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => { await db.workouts.add(entry); await finishWorkoutTimer(); setShowGuidedWorkout(false) }}/>}
+    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} workouts={workouts} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => { await db.workouts.add(entry); await finishWorkoutTimer(); setShowGuidedWorkout(false) }}/>}
   </div>
 }
 
