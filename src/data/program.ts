@@ -73,7 +73,7 @@ export const TRAINING_WEEK: TrainingDay[] = [
       id: 'sat', label: 'Sabato', focus: 'Volume tecnico leggero',
       prescriptions: [
         { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Presa stretta', notes: '3×8 a corpo libero. Lascia almeno 4 ripetizioni in riserva: deve restare una seduta facile.' },
-        { exerciseId: 'push-up', title: 'Push-up a corpo libero', sets: 2, reps: 20, addedLoadKg: 0, variation: 'Strict · sabato', notes: '2×20 senza cedimento. Volume tecnico, non un test.' },
+        { exerciseId: 'push-up', title: 'Push-up endurance facile', sets: 1, reps: 40, addedLoadKg: 0, variation: 'Strict · sabato', notes: '1×40 a corpo libero, circa il 55–60% del tuo massimale attuale. Mantieni un ampio margine: deve essere un set continuo ma facile, non un test.' },
       ],
     },
   {
