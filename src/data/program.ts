@@ -45,7 +45,6 @@ export const TRAINING_WEEK: TrainingDay[] = [
         { exerciseId: 'pull-up', title: 'Pull-up EMOM', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 0, variation: 'Strict', notes: '10×7 a corpo libero. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · top set', sets: 1, reps: 6, addedLoadKg: 25, variation: 'Strict · top set', notes: '1×6 @25 kg; lascia almeno 1–2 RIR e non forzare le ultime ripetizioni.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · back-off', sets: 2, reps: 7, addedLoadKg: 20, variation: 'Strict · back-off', notes: '2×7 @20 kg; porta prima entrambe le serie a 8 reps.' },
-        { exerciseId: 'chin-up', title: 'Chin-up zavorrati', sets: 3, reps: 8, addedLoadKg: 10, variation: 'Supina', notes: '3×8–10 @10–15 kg.' },
       ],
     },
   {
