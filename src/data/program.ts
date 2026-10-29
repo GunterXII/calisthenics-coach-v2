@@ -45,7 +45,6 @@ export const TRAINING_WEEK: TrainingDay[] = [
         { exerciseId: 'pull-up', title: 'Pull-up EMOM', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 0, variation: 'Strict', notes: '10×7 a corpo libero. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · top set', sets: 1, reps: 6, addedLoadKg: 25, variation: 'Strict · top set', notes: '1×6 @25 kg; lascia almeno 1–2 RIR e non forzare le ultime ripetizioni.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · back-off', sets: 2, reps: 7, addedLoadKg: 20, variation: 'Strict · back-off', notes: '2×7 @20 kg; porta prima entrambe le serie a 8 reps.' },
-        { exerciseId: 'pull-up', title: 'Drop set pull-up', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane: una serie controllata dopo aver tolto la zavorra; non arrivare a cedimento tecnico.' },
         { exerciseId: 'chin-up', title: 'Chin-up zavorrati', sets: 3, reps: 8, addedLoadKg: 10, variation: 'Supina', notes: '3×8–10 @10–15 kg.' },
       ],
     },
@@ -55,7 +54,6 @@ export const TRAINING_WEEK: TrainingDay[] = [
         { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 5, variation: 'Parallele', notes: '10×7 @5 kg. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 10, addedLoadKg: 30, variation: 'Parallele · top set', notes: '1×10 @30 kg; mantieni 1–2 RIR e passa a più serie solo quando il set resta pulito.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 3, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '3×12 @20 kg; se la terza serie cala nettamente, fermati a 2 serie e consolida.' },
-        { exerciseId: 'dip', title: 'Drop set dip', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane, solo se spalle e gomiti sono senza fastidi.' },
         { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · superset', pairedWith: 'diamond-push-up', notes: '3–4 round ×12–15 @15–20 kg; alterna con diamond push-up.' },
         { exerciseId: 'diamond-push-up', title: 'Diamond push-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Strict · superset', pairedWith: 'push-up', notes: '8–10 ripetizioni a corpo libero dopo i push-up zavorrati.' },
       ],
@@ -72,20 +70,20 @@ export const TRAINING_WEEK: TrainingDay[] = [
       ],
     },
   {
-      id: 'sat', label: 'Sabato', focus: 'Ipertrofia zavorrata',
+      id: 'sat', label: 'Sabato', focus: 'Volume tecnico leggero',
       prescriptions: [
-        { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 4, reps: 6, addedLoadKg: 20, variation: 'Presa stretta', notes: '4×6–8 @20 kg.' },
-        { exerciseId: 'dip', title: 'Dip con fermo', sets: 3, reps: 8, addedLoadKg: 15, variation: 'Fermo in basso', notes: '3–4×8–10 @15–20 kg; fermo controllato in basso.' },
-        { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · venerdì', notes: '3×12–15 @15–20 kg.' },
+        { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Presa stretta', notes: '3×8 a corpo libero. Lascia almeno 4 ripetizioni in riserva: deve restare una seduta facile.' },
+        { exerciseId: 'dip', title: 'Dip con fermo', sets: 2, reps: 10, addedLoadKg: 0, variation: 'Fermo in basso', notes: '2×10 a corpo libero, fermo controllato e almeno 4 ripetizioni in riserva.' },
+        { exerciseId: 'push-up', title: 'Push-up a corpo libero', sets: 2, reps: 20, addedLoadKg: 0, variation: 'Strict · sabato', notes: '2×20 senza cedimento. Volume tecnico, non un test.' },
       ],
     },
   {
       id: 'sun', label: 'Domenica', focus: 'Circuito tecnico',
       prescriptions: [
-        { exerciseId: 'muscle-up', title: 'Circuito full body', sets: 3, reps: 3, addedLoadKg: 0, variation: 'Circuito', notes: 'Ogni round: 3 muscle-up, 8 pull-up, 15 dip, 20 push-up. Recupera 3 minuti; 3–4 round, fino a 5 solo se le reps restano pulite.' },
-        { exerciseId: 'pull-up', title: 'Circuito · pull-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Circuito', notes: '8 pull-up a round; 3 minuti di recupero tra i round.' },
-        { exerciseId: 'dip', title: 'Circuito · dip', sets: 3, reps: 15, addedLoadKg: 0, variation: 'Circuito', notes: '15 dip a round; mantieni la tecnica.' },
-        { exerciseId: 'push-up', title: 'Circuito · push-up', sets: 3, reps: 20, addedLoadKg: 0, variation: 'Circuito', notes: '20 push-up a round; termina prima del cedimento tecnico.' },
+        { exerciseId: 'muscle-up', title: 'Circuito full body', sets: 3, reps: 3, addedLoadKg: 0, variation: 'Circuito', notes: '3 round iniziali: 3 muscle-up, 8 pull-up, 15 dip e 20 push-up per round. Recupera 3 minuti dopo ogni round. Passa a 4 e poi 5 round solo quando completi tutto con tecnica pulita e senza cedimento.' },
+        { exerciseId: 'pull-up', title: 'Circuito · pull-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Circuito', notes: '8 pull-up per round; recupero di 3 minuti alla fine del round.' },
+        { exerciseId: 'dip', title: 'Circuito · dip', sets: 3, reps: 15, addedLoadKg: 0, variation: 'Circuito', notes: '15 dip per round; mantieni la tecnica e non arrivare al cedimento.' },
+        { exerciseId: 'push-up', title: 'Circuito · push-up', sets: 3, reps: 20, addedLoadKg: 0, variation: 'Circuito', notes: '20 push-up per round; termina prima del cedimento tecnico.' },
       ],
     }
 ]
