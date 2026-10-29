@@ -19,6 +19,7 @@ function effectivePrescription(p: Prescription): Prescription {
 export default function PlanEditor({ day, cycleWeek, onSaved }: Props) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  const [saveError, setSaveError] = useState('')
   const prescriptions = cycleWeek === 4 ? day.prescriptions.filter(p => !p.optional) : day.prescriptions
   const keyFor = (p: Prescription) => p.exerciseId + '::' + p.variation
   const beginEdit = (raw: Prescription) => {
@@ -28,6 +29,7 @@ export default function PlanEditor({ day, cycleWeek, onSaved }: Props) {
       sets: p.sets ?? 1, reps: p.reps ?? 1, load: p.addedLoadKg,
       duration: p.durationMinutes ?? 10, rpm: p.repsPerMinute ?? 6,
     }}))
+    setSaveError('')
     setEditingKey(key)
   }
   const patch = (key: string, values: Partial<Draft>) => setDrafts(current => ({ ...current, [key]: { ...current[key], ...values } }))
@@ -35,10 +37,13 @@ export default function PlanEditor({ day, cycleWeek, onSaved }: Props) {
     const key = keyFor(p)
     const draft = drafts[key]
     if (!draft) return
-    if (p.durationMinutes !== undefined) {
-      saveEmomPlanOverride({ exerciseId: p.exerciseId, variation: p.variation, duration: Math.max(1, Math.min(60, Math.round(draft.duration))), repsPerMinute: Math.max(1, Math.min(100, Math.round(draft.rpm))), load: draft.load, savedAt: Date.now() })
-    } else {
-      saveStrengthPlanOverride({ exerciseId: p.exerciseId, variation: p.variation, targetReps: Math.max(1, Math.min(100, Math.round(draft.reps))), sets: Math.max(1, Math.min(20, Math.round(draft.sets))), addedLoadKg: draft.load, savedAt: Date.now() })
+    setSaveError('')
+    const persisted = p.durationMinutes !== undefined
+      ? saveEmomPlanOverride({ exerciseId: p.exerciseId, variation: p.variation, duration: Math.max(1, Math.min(60, Math.round(draft.duration))), repsPerMinute: Math.max(1, Math.min(100, Math.round(draft.rpm))), load: draft.load, savedAt: Date.now() })
+      : saveStrengthPlanOverride({ exerciseId: p.exerciseId, variation: p.variation, targetReps: Math.max(1, Math.min(100, Math.round(draft.reps))), sets: Math.max(1, Math.min(20, Math.round(draft.sets))), addedLoadKg: draft.load, savedAt: Date.now() })
+    if (!persisted) {
+      setSaveError('Salvataggio non riuscito. Il browser non ha confermato la memorizzazione: riprova.')
+      return
     }
     setEditingKey(null)
     onSaved()
@@ -69,7 +74,8 @@ export default function PlanEditor({ day, cycleWeek, onSaved }: Props) {
             <div className="form-grid"><label>Serie<input type="number" min="1" max="20" value={draft.sets} onChange={e => patch(key, { sets: Number(e.target.value) || 1 })}/></label><label>Ripetizioni/serie<input type="number" min="1" max="100" value={draft.reps} onChange={e => patch(key, { reps: Number(e.target.value) || 1 })}/></label></div>
             <label>Zavorra<select value={draft.load} onChange={e => patch(key, { load: Number(e.target.value) })}>{VALID_LOADS_KG.map(v => <option key={v} value={v}>{v} kg</option>)}</select></label>
           </>}
-          <p className="plan-edit-note">I valori vengono salvati per questo esercizio e questa variante. Nella settimana di deload il volume viene ridotto automaticamente.</p>
+          <p className="plan-edit-note">Valori memorizzati per questo esercizio e questa variante. Il deload resta automatico.</p>
+          {saveError && <p className="plan-edit-error" role="alert">{saveError}</p>}
           <div className="form-grid"><button type="button" className="secondary-button" onClick={() => setEditingKey(null)}><X size={14}/> ANNULLA</button><button type="button" className="primary-button compact" onClick={() => save(raw)}><Check size={14}/> SALVA SCHEDA</button></div>
         </div>}
       </div>
