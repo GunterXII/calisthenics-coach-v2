@@ -215,7 +215,14 @@ export default function App() {
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} aria-current={tab===id ? 'page' : undefined} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>{setEditing(null);setEditingOriginalDate(null)}} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} workouts={workouts} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => { await db.workouts.put(entry); await finishWorkoutTimer(); setShowGuidedWorkout(false) }}/>}
+    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} workouts={workouts} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => {
+      await db.transaction('rw', db.workouts, db.emoms, async () => {
+        await db.workouts.put(entry)
+        if (entry.emomLogs.length) await db.emoms.bulkPut(entry.emomLogs)
+      })
+      await finishWorkoutTimer()
+      setShowGuidedWorkout(false)
+    }}/>}
   </div>
 }
 
