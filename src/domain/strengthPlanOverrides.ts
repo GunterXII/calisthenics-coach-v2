@@ -32,15 +32,16 @@ export function getStrengthPlanOverride(exerciseId: ExerciseId, variation: strin
   return readAll().find(item => item.exerciseId === exerciseId && item.variation === variation) ?? null
 }
 
-export function saveStrengthPlanOverride(override: StrengthPlanOverride) {
+export function saveStrengthPlanOverride(override: StrengthPlanOverride): boolean {
   const current = readAll().filter(item =>
     !(item.exerciseId === override.exerciseId && item.variation === override.variation)
   )
   current.push({ ...override, savedAt: Date.now() })
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current))
+    return true
   } catch {
-    // The current workout can still be logged if localStorage is unavailable.
+    return false
   }
 }
 export function listStrengthPlanOverrides() {
