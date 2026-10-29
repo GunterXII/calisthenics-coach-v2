@@ -53,7 +53,7 @@ export const TRAINING_WEEK: TrainingDay[] = [
       prescriptions: [
         { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 5, variation: 'Parallele', notes: '10×7 @5 kg. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 10, addedLoadKg: 30, variation: 'Parallele · top set', notes: '1×10 @30 kg; mantieni 1–2 RIR e passa a più serie solo quando il set resta pulito.' },
-        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 3, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '3×12 @20 kg; se la terza serie cala nettamente, fermati a 2 serie e consolida.' },
+        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 2, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '2×12 @20 kg. Mantieni questo volume finché il resto della settimana resta recuperabile; poi valuta una terza serie.' },
         { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · superset', pairedWith: 'diamond-push-up', notes: '3–4 round ×12–15 @15–20 kg; alterna con diamond push-up.' },
         { exerciseId: 'diamond-push-up', title: 'Diamond push-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Strict · superset', pairedWith: 'push-up', notes: '8–10 ripetizioni a corpo libero dopo i push-up zavorrati.' },
       ],
@@ -73,7 +73,6 @@ export const TRAINING_WEEK: TrainingDay[] = [
       id: 'sat', label: 'Sabato', focus: 'Volume tecnico leggero',
       prescriptions: [
         { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Presa stretta', notes: '3×8 a corpo libero. Lascia almeno 4 ripetizioni in riserva: deve restare una seduta facile.' },
-        { exerciseId: 'dip', title: 'Dip con fermo', sets: 2, reps: 10, addedLoadKg: 0, variation: 'Fermo in basso', notes: '2×10 a corpo libero, fermo controllato e almeno 4 ripetizioni in riserva.' },
         { exerciseId: 'push-up', title: 'Push-up a corpo libero', sets: 2, reps: 20, addedLoadKg: 0, variation: 'Strict · sabato', notes: '2×20 senza cedimento. Volume tecnico, non un test.' },
       ],
     },
