@@ -42,7 +42,7 @@ function localDateKey(date = new Date()) {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
 }
 
-const PLAN_REFRESH_KEY = 'calisthenics-coach-v2:plan-refresh:2026-10-v3'
+const PLAN_REFRESH_KEY = 'calisthenics-coach-v2:plan-refresh:2026-10-v4'
 function migratePlanProgression(): boolean {
   try {
     if (localStorage.getItem(PLAN_REFRESH_KEY) === 'done') return false
@@ -67,6 +67,7 @@ function migratePlanProgression(): boolean {
       { exerciseId: 'straight-bar-dip' as ExerciseId, variation: 'Quality complex', reps: 6, load: 0, nextReps: 10 },
       { exerciseId: 'pull-up' as ExerciseId, variation: 'Presa stretta', reps: 6, load: 20, nextReps: 8, nextLoad: 0, nextSets: 3 },
       { exerciseId: 'dip' as ExerciseId, variation: 'Fermo in basso', reps: 8, load: 15, nextReps: 10, nextLoad: 0, nextSets: 2 },
+      { exerciseId: 'dip' as ExerciseId, variation: 'Parallele · back-off', reps: 12, load: 20, nextReps: 12, nextLoad: 20, nextSets: 2 },
     ]
     for (const item of strengthUpdates) {
       const saved = getStrengthPlanOverride(item.exerciseId, item.variation)
