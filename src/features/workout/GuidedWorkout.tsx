@@ -6,6 +6,7 @@ import type { EmomLog, SetLog, WorkoutLog } from '../../types'
 type Props = {
   dayLabel: string
   prescriptions: Prescription[]
+  workouts: WorkoutLog[]
   onClose: () => void
   onFinish: (workout: WorkoutLog) => Promise<void>
 }
@@ -13,6 +14,32 @@ type GuidedItem = {
   prescription: Prescription
   sets: { target: number; actual: number; completed: boolean }[]
 }
+function previousPerformance(workouts: WorkoutLog[], prescription: Prescription, index: number) {
+  const sessions = [...workouts]
+    .filter(workout => workout.completedAt !== null)
+    .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+  for (const workout of sessions) {
+    if (prescription.durationMinutes !== undefined) {
+      const log = [...workout.emomLogs].reverse().find(entry =>
+        entry.exerciseId === prescription.exerciseId && entry.variation === prescription.variation
+      )
+      if (!log) continue
+      const minute = log.minutes.find(entry => entry.minute === index + 1) ?? log.minutes[log.minutes.length - 1]
+      if (!minute) continue
+      const load = log.addedLoadKg > 0 ? `+\u00a0${log.addedLoadKg} kg` : 'corpo libero'
+      return { reps: minute.actualReps, detail: `Minuto ${minute.minute} · ${load} · ${workout.date}` }
+    }
+    const matching = workout.setLogs.filter(entry =>
+      entry.exerciseId === prescription.exerciseId && entry.variation === prescription.variation
+    )
+    if (!matching.length) continue
+    const set = matching[index] ?? matching[matching.length - 1]
+    const load = set.addedLoadKg > 0 ? `+\u00a0${set.addedLoadKg} kg` : 'corpo libero'
+    return { reps: set.actualReps, detail: `Serie ${Math.min(index + 1, matching.length)} · ${load} · ${workout.date}` }
+  }
+  return null
+}
+
 const dateKey = () => {
   const d = new Date()
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
@@ -21,7 +48,7 @@ const clock = (seconds: number) => {
   const n = Math.max(0, Math.floor(seconds))
   return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0')
 }
-export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFinish }: Props) {
+export default function GuidedWorkout({ dayLabel, prescriptions, workouts, onClose, onFinish }: Props) {
   const items = useMemo<GuidedItem[]>(() => prescriptions.filter(p => !p.optional).map(p => ({
     prescription: p,
     sets: Array.from({ length: p.durationMinutes ?? p.sets ?? 1 }, () => ({
@@ -45,6 +72,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
   const p = item?.prescription
   const currentSet = item?.sets[setIndex]
   const isEmom = Boolean(p?.durationMinutes)
+  const lastPerformance = p ? previousPerformance(workouts, p, setIndex) : null
   const allDone = current >= progress.length
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 250)
@@ -143,6 +171,7 @@ export default function GuidedWorkout({ dayLabel, prescriptions, onClose, onFini
           <div className="guided-load-editor"><span>ZAVORRA {isEmom ? 'DURANTE L’EMOM' : 'ESERCIZIO'}</span><div className="guided-stepper"><button type="button" onClick={() => { const value = Math.max(0, (p?.addedLoadKg ?? 0) - 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Diminuisci zavorra"><Minus/></button><input aria-label="Zavorra in chilogrammi" type="text" inputMode="numeric" pattern="[0-9]*" value={loadDraft} onChange={e => setLoadDraft(e.target.value)} onBlur={() => { const parsed = loadDraft.trim() === '' ? (p?.addedLoadKg ?? 0) : Number(loadDraft); const value = Number.isFinite(parsed) ? Math.min(30, Math.max(0, Math.round(parsed / 5) * 5)) : (p?.addedLoadKg ?? 0); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}/><span>kg</span><button type="button" onClick={() => { const value = Math.min(30, (p?.addedLoadKg ?? 0) + 5); setProgress(xs => xs.map((x,i) => i !== current ? x : ({ ...x, prescription: { ...x.prescription, addedLoadKg: value } }))); setLoadDraft(String(value)) }} aria-label="Aumenta zavorra"><Plus/></button></div><small>Incrementi disponibili: 0, 5, 10, 15, 20, 25 o 30 kg.</small></div>
           <div className="guided-set-counter">{isEmom ? 'MINUTO' : 'SERIE'} <strong>{String(setIndex + 1).padStart(2, '0')}</strong><span>/ {String(item?.sets.length).padStart(2, '0')}</span></div>
           <div className="guided-target"><small>{isEmom ? 'TARGET DEL MINUTO' : 'RIPETIZIONI TARGET'}</small><strong>{currentSet?.target ?? 0}</strong><span>ripetizioni</span></div>
+          {lastPerformance && <div className="guided-last-time"><div><small>SCORSA VOLTA</small><strong>{lastPerformance.reps} <span>rep</span></strong></div><span>{lastPerformance.detail}</span></div>}
           <div className="guided-entry"><span>RIPETIZIONI EFFETTIVE</span><div className="guided-stepper">
             <button onClick={() => updateActual(-1)} aria-label="Diminuisci"><Minus/></button>
             <input type="number" min="0" value={currentSet?.actual ?? 0} onChange={e => setActual(Number(e.target.value))}/>
