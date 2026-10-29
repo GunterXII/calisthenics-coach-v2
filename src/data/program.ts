@@ -45,6 +45,8 @@ export const TRAINING_WEEK: TrainingDay[] = [
         { exerciseId: 'pull-up', title: 'Pull-up EMOM', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 0, variation: 'Strict', notes: '10×7 a corpo libero. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · top set', sets: 1, reps: 6, addedLoadKg: 25, variation: 'Strict · top set', notes: '1×6 @25 kg; lascia almeno 1–2 RIR e non forzare le ultime ripetizioni.' },
         { exerciseId: 'pull-up', title: 'Pull-up zavorrati · back-off', sets: 2, reps: 7, addedLoadKg: 20, variation: 'Strict · back-off', notes: '2×7 @20 kg; porta prima entrambe le serie a 8 reps.' },
+        { exerciseId: 'pull-up', title: 'Drop set pull-up', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane: una serie controllata dopo aver tolto la zavorra; non arrivare al cedimento tecnico.' },
+        { exerciseId: 'chin-up', title: 'Chin-up zavorrati', sets: 3, reps: 8, addedLoadKg: 10, variation: 'Supina', notes: '3×8–10 @10–15 kg.' },
       ],
     },
   {
@@ -52,7 +54,8 @@ export const TRAINING_WEEK: TrainingDay[] = [
       prescriptions: [
         { exerciseId: 'dip', title: 'Dip EMOM zavorrati', durationMinutes: 10, repsPerMinute: 7, addedLoadKg: 5, variation: 'Parallele', notes: '10×7 @5 kg. Consolida tutte le ripetizioni con tecnica pulita; poi passa a 8 rep/min.' },
         { exerciseId: 'dip', title: 'Dip zavorrati · top set', sets: 1, reps: 10, addedLoadKg: 30, variation: 'Parallele · top set', notes: '1×10 @30 kg; mantieni 1–2 RIR e passa a più serie solo quando il set resta pulito.' },
-        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 2, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '2×12 @20 kg. Mantieni questo volume finché il resto della settimana resta recuperabile; poi valuta una terza serie.' },
+        { exerciseId: 'dip', title: 'Dip zavorrati · back-off', sets: 3, reps: 12, addedLoadKg: 20, variation: 'Parallele · back-off', notes: '3×12 @20 kg.' },
+        { exerciseId: 'dip', title: 'Drop set dip', sets: 1, reps: 1, addedLoadKg: 0, variation: 'Drop set', optional: true, notes: 'Facoltativo ogni due settimane, solo se spalle e gomiti sono senza fastidi.' },
         { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · superset', pairedWith: 'diamond-push-up', notes: '3–4 round ×12–15 @15–20 kg; alterna con diamond push-up.' },
         { exerciseId: 'diamond-push-up', title: 'Diamond push-up', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Strict · superset', pairedWith: 'push-up', notes: '8–10 ripetizioni a corpo libero dopo i push-up zavorrati.' },
       ],
@@ -69,10 +72,11 @@ export const TRAINING_WEEK: TrainingDay[] = [
       ],
     },
   {
-      id: 'sat', label: 'Sabato', focus: 'Volume tecnico leggero',
+      id: 'sat', label: 'Sabato', focus: 'Ipertrofia zavorrata',
       prescriptions: [
-        { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 3, reps: 8, addedLoadKg: 0, variation: 'Presa stretta', notes: '3×8 a corpo libero. Lascia almeno 4 ripetizioni in riserva: deve restare una seduta facile.' },
-        { exerciseId: 'push-up', title: 'Push-up endurance facile', sets: 1, reps: 40, addedLoadKg: 0, variation: 'Strict · sabato', notes: '1×40 a corpo libero, circa il 55–60% del tuo massimale attuale. Mantieni un ampio margine: deve essere un set continuo ma facile, non un test.' },
+        { exerciseId: 'pull-up', title: 'Pull-up presa stretta', sets: 4, reps: 6, addedLoadKg: 20, variation: 'Presa stretta', notes: '4×6–8 @20 kg.' },
+        { exerciseId: 'dip', title: 'Dip con fermo', sets: 3, reps: 8, addedLoadKg: 15, variation: 'Fermo in basso', notes: '3–4×8–10 @15–20 kg; fermo controllato in basso.' },
+        { exerciseId: 'push-up', title: 'Push-up zavorrati', sets: 3, reps: 12, addedLoadKg: 15, variation: 'Strict · venerdì', notes: '3×12–15 @15–20 kg.' },
       ],
     },
   {
