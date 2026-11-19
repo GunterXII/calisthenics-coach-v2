@@ -18,6 +18,7 @@ const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
   { id: 'history', label: 'Storico', icon: History }, { id: 'progress', label: 'Progressi', icon: ChartNoAxesCombined },
 ]
 const ACTIVE_WORKOUT_KEY = 'calisthenics-coach-v2:active-training-session:v1'
+const SELECTED_WORKOUT_DAY_KEY = 'calisthenics-coach-v2:selected-workout-day:v1'
 interface ActiveWorkoutTimer { id: string; startedAt: number; pausedAt: number | null; pausedMs: number }
 function readActiveWorkoutTimer(): ActiveWorkoutTimer | null {
   try {
@@ -48,6 +49,13 @@ function suggestedWorkoutDayId(date = new Date()) {
     if (day.prescriptions.length) return day.id
   }
   return TRAINING_WEEK[0].id
+}
+function readSelectedWorkoutDayId() {
+  try {
+    const saved = localStorage.getItem(SELECTED_WORKOUT_DAY_KEY)
+    if (saved && TRAINING_WEEK.some(day => day.id === saved && day.prescriptions.length > 0)) return saved
+  } catch {}
+  return suggestedWorkoutDayId()
 }
 const plateInventorySummary = [...new Set(PLATES_KG)]
   .sort((a, b) => b - a)
@@ -124,7 +132,7 @@ function withSavedProgression(prescription: Prescription): Prescription {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
-  const [selectedWorkoutDayId, setSelectedWorkoutDayId] = useState<string>(() => suggestedWorkoutDayId())
+  const [selectedWorkoutDayId, setSelectedWorkoutDayId] = useState<string>(() => readSelectedWorkoutDayId())
   const [planRevision, setPlanRevision] = useState(0)
   const [activeWorkoutTimer, setActiveWorkoutTimer] = useState<ActiveWorkoutTimer | null>(() => readActiveWorkoutTimer())
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
@@ -224,7 +232,7 @@ export default function App() {
         <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>Scegli la sessione</h2></div><span className="tag">{cycleWeek === 4 ? "DELOAD · SETTIMANA 4" : "CARICO · SETTIMANA " + cycleWeek}</span></div>
         <p className="workout-picker-hint">Gli allenamenti non sono legati al giorno della settimana: scegli quello che puoi svolgere oggi. La scheda e le progressioni restano invariate.</p>
         <div className="workout-picker" role="group" aria-label="Scegli quale allenamento svolgere">
-          {workoutDays.map((day, index) => <button type="button" key={day.id} className={selectedWorkoutDay.id === day.id ? 'workout-choice selected' : 'workout-choice'} aria-pressed={selectedWorkoutDay.id === day.id} onClick={() => setSelectedWorkoutDayId(day.id)}>
+          {workoutDays.map((day, index) => <button type="button" key={day.id} className={selectedWorkoutDay.id === day.id ? 'workout-choice selected' : 'workout-choice'} aria-pressed={selectedWorkoutDay.id === day.id} onClick={() => { setSelectedWorkoutDayId(day.id); try { localStorage.setItem(SELECTED_WORKOUT_DAY_KEY, day.id) } catch {} }}>
             <span className="workout-choice-day">SESSIONE {String(index + 1).padStart(2, '0')}</span>
             <strong>{day.focus}</strong>
             <small>{day.label}</small>
