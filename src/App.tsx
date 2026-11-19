@@ -133,7 +133,7 @@ function withSavedProgression(prescription: Prescription): Prescription {
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [selectedWorkoutDayId, setSelectedWorkoutDayId] = useState<string>(() => readSelectedWorkoutDayId())
-  const [planRevision, setPlanRevision] = useState(0)
+  const [, setPlanRevision] = useState(0)
   const [activeWorkoutTimer, setActiveWorkoutTimer] = useState<ActiveWorkoutTimer | null>(() => readActiveWorkoutTimer())
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
     try { const value = Number(localStorage.getItem('calisthenics-coach-v2:cycle-week')); return [1, 2, 3, 4].includes(value) ? value as CycleWeek : 1 } catch { return 1 }
