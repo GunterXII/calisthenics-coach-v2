@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts'
 import { Pencil, Trash2 } from 'lucide-react'
 import { db } from '../../database/db'
-import { EXERCISES } from '../../data/program'
+import { EXERCISES, VALID_LOADS_KG } from '../../data/program'
 import type { ExerciseId, PersonalRecord, WorkoutLog } from '../../types'
 
 type Range = '30' | '90' | 'all'
@@ -164,7 +164,7 @@ export default function ProgressDashboard({ workouts }: { workouts: WorkoutLog[]
       <div className="emom-filter-grid">
         <label>Esercizio<select value={emomExercise} onChange={event => { setEmomExercise(event.target.value as ExerciseId); setEmomVariation('all') }}>{EXERCISES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>Variante<select value={emomVariation} onChange={event => setEmomVariation(event.target.value)}><option value="all">Tutte</option>{availableVariations.map(variation => <option key={variation} value={variation}>{variation}</option>)}</select></label>
-        <label>Zavorra<select value={emomLoad} onChange={event => setEmomLoad(event.target.value)}><option value="all">Tutte</option>{[0, 5, 10, 15, 20, 25, 30].map(load => <option key={load} value={String(load)}>{load} kg</option>)}</select></label>
+        <label>Zavorra<select value={emomLoad} onChange={event => setEmomLoad(event.target.value)}><option value="all">Tutte</option>{VALID_LOADS_KG.map(load => <option key={load} value={String(load)}>{load} kg</option>)}</select></label>
       </div>
       {emomSeries.length ? <><ResponsiveContainer width="100%" height={190}><AreaChart data={emomSeries}><CartesianGrid stroke="#292929" vertical={false} /><XAxis dataKey="date" stroke="#777" tickLine={false} axisLine={false} /><YAxis stroke="#777" tickLine={false} axisLine={false} width={28} /><Tooltip contentStyle={{ background: '#171717', border: '1px solid #333', borderRadius: 10 }} /><Area type="monotone" dataKey="averageTarget" name="Target medio" stroke="#666" fill="#666" fillOpacity={.08} /><Area type="monotone" dataKey="averageActual" name="Media effettiva" stroke="#d0d4da" fill="#d0d4da" fillOpacity={.16} /></AreaChart></ResponsiveContainer><p className="chart-subtitle">Completamento medio della sessione più recente: {emomSeries[emomSeries.length - 1].completion}% · zavorra {emomSeries[emomSeries.length - 1].load} kg.</p></> : <div className="chart-empty">Registra una sessione EMOM per confrontare target e ripetizioni effettive per variante e carico.</div>}
     </div>
