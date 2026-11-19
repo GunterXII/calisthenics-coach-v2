@@ -6,7 +6,7 @@ import GuidedWorkout from './features/workout/GuidedWorkout'
 import DataManagement from './features/data/DataManagement'
 import RecoveryAdvisor from './features/recovery/RecoveryAdvisor'
 import PlanEditor from './features/plan/PlanEditor'
-import { EXERCISES, TRAINING_WEEK, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek, type Prescription } from './data/program'
+import { EXERCISES, TRAINING_WEEK, PLATES_KG, MAX_ADDED_LOAD_KG, VALID_LOADS_KG, prescriptionSummary, prescriptionNotes, prescriptionForWeek, type CycleWeek, type Prescription } from './data/program'
 import { getStrengthPlanOverride, saveStrengthPlanOverride } from './domain/strengthPlanOverrides'
 import { getEmomPlanOverride, saveEmomPlanOverride } from './domain/emomPlanOverrides'
 import type { EmomLog, ExerciseId, SetLog, TrainingSession, WorkoutLog } from './types'
@@ -41,6 +41,18 @@ function formatDuration(totalSeconds: number) {
 function localDateKey(date = new Date()) {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
 }
+function suggestedWorkoutDayId(date = new Date()) {
+  const todayIndex = (date.getDay() + 6) % 7
+  for (let offset = 0; offset < TRAINING_WEEK.length; offset += 1) {
+    const day = TRAINING_WEEK[(todayIndex + offset) % TRAINING_WEEK.length]
+    if (day.prescriptions.length) return day.id
+  }
+  return TRAINING_WEEK[0].id
+}
+const plateInventorySummary = [...new Set(PLATES_KG)]
+  .sort((a, b) => b - a)
+  .map(weight => `${PLATES_KG.filter(plate => plate === weight).length}×${weight} kg`)
+  .join(' · ')
 
 const PLAN_REFRESH_KEY = 'calisthenics-coach-v2:plan-refresh:2026-10-v5'
 function migratePlanProgression(): boolean {
@@ -111,8 +123,8 @@ function withSavedProgression(prescription: Prescription): Prescription {
 }
 
 export default function App() {
-  const today = TRAINING_WEEK[(new Date().getDay() + 6) % 7]
   const [tab, setTab] = useState<Tab>('today')
+  const [selectedWorkoutDayId, setSelectedWorkoutDayId] = useState<string>(() => suggestedWorkoutDayId())
   const [planRevision, setPlanRevision] = useState(0)
   const [activeWorkoutTimer, setActiveWorkoutTimer] = useState<ActiveWorkoutTimer | null>(() => readActiveWorkoutTimer())
   const [cycleWeek, setCycleWeek] = useState<CycleWeek>(() => {
@@ -129,7 +141,9 @@ export default function App() {
   const oldestIncludedDate = new Date(); oldestIncludedDate.setHours(12, 0, 0, 0); oldestIncludedDate.setDate(oldestIncludedDate.getDate() - 6)
   const oldestIncludedKey = localDateKey(oldestIncludedDate)
   const weeklyCount = useMemo(() => workouts.filter(w => w.date >= oldestIncludedKey && w.date <= todayKey).length, [workouts, oldestIncludedKey, todayKey])
-  const activeTodayPrescriptions = useMemo(() => cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions, [cycleWeek, today.id, planRevision])
+  const workoutDays = TRAINING_WEEK.filter(day => day.prescriptions.length > 0)
+  const selectedWorkoutDay = workoutDays.find(day => day.id === selectedWorkoutDayId) ?? workoutDays[0]
+  const activeWorkoutPrescriptions = cycleWeek === 4 ? selectedWorkoutDay.prescriptions.filter(p => !p.optional) : selectedWorkoutDay.prescriptions
 
   useEffect(() => {
     if (migratePlanProgression()) setPlanRevision(value => value + 1)
@@ -207,18 +221,27 @@ export default function App() {
         <div className="eyebrow">{new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()).toUpperCase()}</div>
         <div className="stats-grid"><Stat label="SESSIONI TOTALI" value={totalSessions.toString().padStart(2,'0')}/><Stat label="ULTIMI 7 GIORNI" value={weeklyCount.toString().padStart(2,'0')}/><Stat label="CICLO" value={String(cycleWeek).padStart(2, '0') + " / 04"}/></div>
         <RecoveryAdvisor workouts={workouts} />
-        <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>{today.label} <span className="muted">/ {today.focus}</span></h2></div><span className="tag">{cycleWeek === 4 ? "DELOAD · SETTIMANA 4" : "CARICO · SETTIMANA " + cycleWeek}</span></div>
-        {activeTodayPrescriptions.length ? <div className="exercise-list">{(cycleWeek === 4 ? today.prescriptions.filter(p => !p.optional) : today.prescriptions).map((p,i)=>{const effective=withSavedProgression(p);return <article className="exercise-card" key={today.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{prescriptionSummary(effective, cycleWeek)}</span>{p.notes && <small className="plan-notes">{prescriptionNotes(effective, cycleWeek)}</small>}</div></article>})}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
-        {activeTodayPrescriptions.length > 0 && <button className="primary-button guided-launch-button" onClick={() => { startWorkoutTimer(); setShowGuidedWorkout(true) }}><Play size={18}/> AVVIA ALLENAMENTO</button>}
+        <div className="section-heading"><div><div className="eyebrow">PROGRAMMA</div><h2>Scegli la sessione</h2></div><span className="tag">{cycleWeek === 4 ? "DELOAD · SETTIMANA 4" : "CARICO · SETTIMANA " + cycleWeek}</span></div>
+        <p className="workout-picker-hint">Gli allenamenti non sono legati al giorno della settimana: scegli quello che puoi svolgere oggi. La scheda e le progressioni restano invariate.</p>
+        <div className="workout-picker" role="group" aria-label="Scegli quale allenamento svolgere">
+          {workoutDays.map((day, index) => <button type="button" key={day.id} className={selectedWorkoutDay.id === day.id ? 'workout-choice selected' : 'workout-choice'} aria-pressed={selectedWorkoutDay.id === day.id} onClick={() => setSelectedWorkoutDayId(day.id)}>
+            <span className="workout-choice-day">SESSIONE {String(index + 1).padStart(2, '0')}</span>
+            <strong>{day.focus}</strong>
+            <small>{day.label}</small>
+          </button>)}
+        </div>
+        <div className="section-heading"><div><div className="eyebrow">SESSIONE SELEZIONATA</div><h2>{selectedWorkoutDay.label} <span className="muted">/ {selectedWorkoutDay.focus}</span></h2></div></div>
+        {activeWorkoutPrescriptions.length ? <div className="exercise-list">{activeWorkoutPrescriptions.map((p,i)=>{const effective=withSavedProgression(p);return <article className="exercise-card" key={selectedWorkoutDay.id+i}><div className="exercise-index">{String(i+1).padStart(2,'0')}</div><div className="exercise-info"><strong>{p.title}</strong><span>{prescriptionSummary(effective, cycleWeek)}</span>{p.notes && <small className="plan-notes">{prescriptionNotes(effective, cycleWeek)}</small>}</div></article>})}</div> : <div className="rest-card"><span>RECUPERO PROGRAMMATO</span><h3>Oggi si recupera.</h3><p>Il recupero fa parte della progressione.</p></div>}
+        {activeWorkoutPrescriptions.length > 0 && <button className="primary-button guided-launch-button" onClick={() => { startWorkoutTimer(); setShowGuidedWorkout(true) }}><Play size={18}/> AVVIA ALLENAMENTO</button>}
       </section>}
-      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. La selezione viene salvata su questo dispositivo.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day => <PlanEditor key={day.id} day={day} cycleWeek={cycleWeek} onSaved={() => setPlanRevision(value => value + 1)} />)}</section>}
+      {tab === 'plan' && <section><div className="eyebrow">IL TUO SISTEMA</div><h1>La scheda<span>.</span></h1><p className="muted">3 settimane di carico + 1 settimana di deload. Le sessioni sono selezionabili liberamente dalla schermata Oggi.</p><div className="cycle-selector" aria-label="Settimana del ciclo">{([1,2,3,4] as CycleWeek[]).map(week=><button key={week} type="button" className={cycleWeek===week?'selected':''} onClick={()=>{setCycleWeek(week);try{localStorage.setItem('calisthenics-coach-v2:cycle-week',String(week))}catch{}}}><small>SETTIMANA</small><strong>{String(week).padStart(2,'0')}</strong><span>{week===4?'DELOAD':'CARICO'}</span></button>)}</div><div className="equipment-card"><div><small>ZAVORRA TOTALE DISPONIBILE</small><strong>{MAX_ADDED_LOAD_KG} kg</strong></div><p>{plateInventorySummary}</p></div>{cycleWeek===4 && <div className="deload-banner"><strong>Settimana di scarico attiva</strong><span>Volume ridotto circa del 40%, carico ridotto ove possibile e niente drop set, cedimento o circuiti massimali. Le registrazioni non vengono modificate automaticamente.</span></div>}{TRAINING_WEEK.map(day => <PlanEditor key={day.id} day={day} cycleWeek={cycleWeek} onSaved={() => setPlanRevision(value => value + 1)} />)}</section>}
       {tab === 'history' && <section><div className="eyebrow">DATABASE PERSONALE</div><h1>Storico<span>.</span></h1>{trainingSessions.length > 0 && <><div className="session-history-heading"><div><div className="eyebrow">CRONOMETRO</div><h2>Allenamenti completati</h2></div></div><div className="session-history-list">{trainingSessions.slice(0, 8).map(session => <article className="session-history-card" key={session.id}><div><strong>{new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(session.startedAt))}</strong><small>{new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date(session.startedAt))}–{new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date(session.endedAt))} · {session.loggedEntries} elementi · {session.totalReps} reps</small></div><b>{formatDuration(session.durationSeconds)}</b></article>)}</div></>}{workouts.length ? workouts.map(w=><article className="history-card history-card-edit" key={w.id}><div className="history-main"><strong>{w.title}</strong><small>{w.date} · {w.setLogs.length} serie · {w.emomLogs.length} EMOM</small><small>{w.notes || 'Nessuna nota'}</small></div><span>{w.setLogs.reduce((n,s)=>n+s.actualReps,0)+w.emomLogs.reduce((n,e)=>n+e.minutes.reduce((a,m)=>a+m.actualReps,0),0)} reps</span><button className="icon-button" aria-label="Modifica" onClick={()=>{setEditingOriginalDate(w.date);setEditing(structuredClone(w))}}><Pencil size={16}/></button><button className="icon-button danger" aria-label="Elimina" onClick={()=>setDeleteId(w.id)}><Trash2 size={16}/></button></article>) : <div className="empty-state">Le tue sessioni appariranno qui, una volta registrate.</div>}<DataManagement workouts={workouts} onRestored={()=>{try{const value=Number(localStorage.getItem('calisthenics-coach-v2:cycle-week'));setCycleWeek([1,2,3,4].includes(value)?value as CycleWeek:1)}catch{setCycleWeek(1)}}}/></section>}
       {tab === 'progress' && <section><div className="eyebrow">OBIETTIVI</div><h1>Progressi<span>.</span></h1><Suspense fallback={<div className="empty-state">Caricamento delle analisi…</div>}><ProgressDashboard workouts={workouts}/></Suspense></section>}
     </main>
     <nav className="bottom-nav">{tabs.map(({id,label,icon:Icon})=><button key={id} className={tab===id?'nav-item active':'nav-item'} aria-current={tab===id ? 'page' : undefined} onClick={()=>setTab(id)}><Icon size={19}/><span>{label}</span></button>)}</nav>
     {editing && <WorkoutEditor workout={editing} onChange={setEditing} onClose={()=>{setEditing(null);setEditingOriginalDate(null)}} onSave={()=>void saveEdit()}/>}
     {deleteId && <div className="modal-backdrop"><div className="modal"><div className="modal-head"><h2>Eliminare la sessione?</h2><button className="close-button" onClick={()=>setDeleteId(null)}>×</button></div><p className="muted">Questa azione non può essere annullata.</p><div className="form-grid"><button className="secondary-button" onClick={()=>setDeleteId(null)}>ANNULLA</button><button className="primary-button" onClick={()=>void deleteWorkout()}>ELIMINA</button></div></div></div>}
-    {showGuidedWorkout && <GuidedWorkout dayLabel={today.label} prescriptions={activeTodayPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} workouts={workouts} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => {
+    {showGuidedWorkout && <GuidedWorkout dayLabel={selectedWorkoutDay.label} prescriptions={activeWorkoutPrescriptions.map(p => prescriptionForWeek(withSavedProgression(p), cycleWeek))} workouts={workouts} onClose={() => setShowGuidedWorkout(false)} onFinish={async entry => {
       await db.transaction('rw', db.workouts, db.emoms, async () => {
         await db.workouts.put(entry)
         if (entry.emomLogs.length) await db.emoms.bulkPut(entry.emomLogs)
