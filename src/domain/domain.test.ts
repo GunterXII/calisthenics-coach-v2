@@ -3,7 +3,7 @@ import { suggestEmomProgression } from './progression'
 import { getRecoveryAlerts } from './recovery'
 import { parseBackup } from './backup'
 import { suggestStrengthProgression } from './strengthProgression'
-import { prescriptionForWeek, TRAINING_WEEK } from '../data/program'
+import { prescriptionForWeek, TRAINING_WEEK, PLATES_KG, MAX_ADDED_LOAD_KG, VALID_LOADS_KG } from '../data/program'
 import type { EmomLog, WorkoutLog } from '../types'
 
 function emom(overrides: Partial<EmomLog> = {}): EmomLog {
@@ -162,6 +162,12 @@ describe('strength progression rules', () => {
 })
 
 describe('weekly program', () => {
+  it('exposes the full symmetrical plate inventory up to 70 kg in 5 kg steps', () => {
+    expect(PLATES_KG).toEqual([20, 20, 10, 10, 5, 5])
+    expect(MAX_ADDED_LOAD_KG).toBe(70)
+    expect(VALID_LOADS_KG).toEqual(Array.from({ length: 15 }, (_, index) => index * 5))
+  })
+
   it('matches the athlete schedule: Tue, Wed, Fri, Sat, Sun', () => {
     expect(TRAINING_WEEK.map(day => day.label)).toEqual(['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'])
     expect(TRAINING_WEEK.filter(day => day.prescriptions.length).map(day => day.label)).toEqual(['Martedì', 'Mercoledì', 'Venerdì', 'Sabato', 'Domenica'])
@@ -189,6 +195,20 @@ describe('backup validation', () => {
     expect(backup.settings.cycleWeek).toBe(1)
     expect(backup.settings.strengthPlanOverrides).toHaveLength(0)
     expect(backup.data.sessions).toHaveLength(0)
+  })
+
+  it('accepts 70 kg progression targets in strength and EMOM backups', () => {
+    const backup = parseBackup({
+      app: 'calisthenics-coach-v2', schemaVersion: 2, exportedAt: '2026-10-28T12:00:00.000Z',
+      data: { workouts: [], emoms: [], records: [], sessions: [] },
+      settings: {
+        strengthPlanOverrides: [{ exerciseId: 'pull-up', variation: 'Strict', targetReps: 3, sets: 4, addedLoadKg: 70, savedAt: 10 }],
+        emomPlanOverrides: [{ exerciseId: 'dip', variation: 'Parallele', duration: 10, repsPerMinute: 5, load: 70, savedAt: 10 }],
+        cycleWeek: 1,
+      },
+    })
+    expect(backup.settings.strengthPlanOverrides[0].addedLoadKg).toBe(70)
+    expect(backup.settings.emomPlanOverrides[0].load).toBe(70)
   })
 
   it('preserves a completed stopwatch session in a version 2 backup', () => {
