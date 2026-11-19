@@ -1,7 +1,11 @@
 import type { Exercise, ExerciseId } from '../types'
 
-export const PLATES_KG = [10, 10, 5, 5] as const
-export const VALID_LOADS_KG = [0, 5, 10, 15, 20, 25, 30] as const
+export const PLATES_KG = [20, 20, 10, 10, 5, 5] as const
+export const MAX_ADDED_LOAD_KG = PLATES_KG.reduce((total, plate) => total + plate, 0)
+export const VALID_LOADS_KG: readonly number[] = Array.from(
+  { length: MAX_ADDED_LOAD_KG / 5 + 1 },
+  (_, index) => index * 5,
+)
 
 export const EXERCISES: Exercise[] = [
   { id: 'pull-up', name: 'Pull-up', category: 'pull', unit: 'reps' },
