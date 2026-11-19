@@ -1,5 +1,6 @@
 import { db } from '../database/db'
 import type { EmomLog, PersonalRecord, TrainingSession, WorkoutLog, ExerciseId } from '../types'
+import { VALID_LOADS_KG } from '../data/program'
 import { listStrengthPlanOverrides, replaceStrengthPlanOverrides, type StrengthPlanOverride } from './strengthPlanOverrides'
 import { listEmomPlanOverrides, replaceEmomPlanOverrides, type EmomPlanOverride } from './emomPlanOverrides'
 
@@ -48,14 +49,14 @@ function isStrengthOverride(value: unknown): value is StrengthPlanOverride {
   return isObject(value) && isExerciseId(value.exerciseId) && typeof value.variation === 'string' &&
     Number.isFinite(value.targetReps) && Number(value.targetReps) >= 1 &&
     (value.sets === undefined || (Number.isFinite(value.sets) && Number(value.sets) >= 1 && Number(value.sets) <= 20)) &&
-    [0, 5, 10, 15, 20, 25, 30].includes(Number(value.addedLoadKg)) &&
+    VALID_LOADS_KG.includes(Number(value.addedLoadKg)) &&
     Number.isFinite(value.savedAt)
 }
 function isEmomOverride(value: unknown): value is EmomPlanOverride {
   return isObject(value) && isExerciseId(value.exerciseId) && typeof value.variation === 'string' &&
     Number.isFinite(value.duration) && Number(value.duration) >= 1 && Number(value.duration) <= 60 &&
     Number.isFinite(value.repsPerMinute) && Number(value.repsPerMinute) >= 1 && Number(value.repsPerMinute) <= 100 &&
-    [0, 5, 10, 15, 20, 25, 30].includes(Number(value.load)) && Number.isFinite(value.savedAt)
+    VALID_LOADS_KG.includes(Number(value.load)) && Number.isFinite(value.savedAt)
 }
 export function parseBackup(value: unknown): CoachBackup {
   if (!isObject(value) || value.app !== 'calisthenics-coach-v2' ||
